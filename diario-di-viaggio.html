@@ -50,7 +50,7 @@
   .brand h1{font-family:var(--font-display);color:var(--cream);font-size:20px;margin:0;line-height:1;}
   .brand p{font-family:var(--font-mono);font-size:11px;color:var(--foam);letter-spacing:.05em;margin:2px 0 0;}
   .compass{width:24px;height:24px;color:var(--coral);flex-shrink:0;}
-  .btn-print{display:flex;align-items:center;gap:6px;font-size:14px;padding:8px 14px;border-radius:999px;border:1px solid var(--foam-border);color:var(--cream);background:transparent;}
+  .btn-print{display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;padding:10px;border-radius:999px;border:1px solid var(--foam-border);color:var(--cream);background:transparent;}
   .btn-print:disabled{opacity:.3;}
 
   main{padding:24px 0 120px;}
@@ -109,6 +109,17 @@
     background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;}
   .photo-preview button svg{width:16px;height:16px;color:#fff;}
 
+  .bulk-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:6px;}
+  .bulk-grid .thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;}
+  .bulk-grid .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .bulk-grid .thumb .thumb-remove{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;
+    background:rgba(0,0,0,.6);border:none;display:flex;align-items:center;justify-content:center;}
+  .bulk-grid .thumb .thumb-remove svg{width:12px;height:12px;color:#fff;}
+  .bulk-count{font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);margin:-8px 0 0;}
+  .bulk-clear{background:none;border:none;color:var(--error-text);font-size:12px;padding:0;text-decoration:underline;}
+  .photo-count-badge{position:absolute;bottom:22px;right:12px;background:rgba(0,0,0,.6);color:#fff;
+    font-family:var(--font-mono);font-size:11px;padding:3px 8px;border-radius:999px;}
+
   .chip-row{display:flex;flex-wrap:wrap;gap:8px;}
   .chip{display:flex;align-items:center;gap:6px;font-size:14px;padding:8px 14px;border-radius:999px;
     border:1px solid var(--field-border);color:var(--ink-soft);background:transparent;}
@@ -147,7 +158,7 @@
   .loading-wrap{display:flex;align-items:center;justify-content:center;padding:96px 0;color:var(--foam);}
   .loading-wrap svg{width:28px;height:28px;}
 
-  .trip-bar{display:flex;justify-content:center;padding:4px 0 20px;}
+  .trip-bar{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;padding:4px 0 20px;}
   .trip-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;
     border:1px solid var(--foam-border);background:rgba(255,255,255,.04);color:var(--cream);
     font-family:var(--font-mono);font-size:12px;letter-spacing:.03em;}
@@ -182,13 +193,17 @@
     .stamp{border-color:#999;}
     .stamp span{color:#333;}
     .day-section{margin-bottom:24px !important;}
+    .card-cover{display:none !important;}
+    .card-print-gallery{display:flex !important;flex-direction:column;gap:10px;margin-bottom:12px;}
+    .card-print-gallery img{width:100%;height:auto;display:block;border-radius:6px;page-break-inside:avoid;}
   }
+  .card-print-gallery{display:none;}
 </style>
 </head>
 <body>
 
 <div class="print-only" id="printHead">
-  <h1>Diario di Viaggio di Emma</h1>
+  <h1>Diario di Viaggio</h1>
   <p id="printRange"></p>
 </div>
 
@@ -201,10 +216,14 @@
         <p>DI EMMA</p>
       </div>
     </div>
-    <button class="btn-print" id="printBtn" disabled>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      Esporta PDF
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn-print" id="zipBtn" disabled aria-label="Esporta ZIP" title="Esporta ZIP">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+      </button>
+      <button class="btn-print" id="printBtn" disabled aria-label="Esporta PDF" title="Esporta PDF">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -236,16 +255,16 @@
       <input id="f-title" placeholder="Titolo (opzionale)">
       <textarea id="f-note" rows="4" placeholder="Racconta cosa sta succedendo..."></textarea>
 
-      <div id="f-photo-preview" class="photo-preview hidden">
-        <img id="f-photo-img" src="">
-        <button id="f-photo-remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div id="f-photo-gallery" class="hidden">
+        <p class="bulk-count" id="f-photo-count"></p>
+        <div class="bulk-grid" id="f-photo-grid"></div>
       </div>
 
       <div class="chip-row">
-        <input type="file" id="f-photo-input" accept="image/*" capture="environment" class="hidden">
+        <input type="file" id="f-photo-input" accept="image/*" capture="environment" multiple class="hidden">
         <button class="chip" id="f-photo-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
-          <span id="f-photo-label">Foto</span>
+          <span id="f-photo-label">Aggiungi foto</span>
         </button>
 
         <button class="chip" id="f-audio-btn">
@@ -290,7 +309,7 @@
     <div class="sheet-body">
       <div class="trip-list" id="tripList"></div>
       <div class="trip-new-row">
-        <input id="tripNewName" placeholder="Nome nuova vacanza (es. Sicilia 2027)">
+        <input id="tripNewName" placeholder="Nome vacanza (es. Sicilia 2027)">
         <button id="tripNewBtn">Crea</button>
       </div>
     </div>
@@ -298,6 +317,22 @@
 </div>
 
 <audio id="playerAudio" class="hidden"></audio>
+
+<div id="lightboxOverlay" class="overlay hidden" style="z-index:40;background:rgba(0,0,0,.9);">
+  <div style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+    <button id="lightboxClose" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);border:none;display:flex;align-items:center;justify-content:center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <button id="lightboxPrev" style="position:absolute;left:8px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);border:none;display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <img id="lightboxImg" src="" style="max-width:92%;max-height:88%;object-fit:contain;border-radius:6px;">
+    <button id="lightboxNext" style="position:absolute;right:8px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);border:none;display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div id="lightboxCounter" style="position:absolute;bottom:20px;left:0;right:0;text-align:center;color:#fff;font-family:var(--font-mono);font-size:12px;"></div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -463,6 +498,154 @@
     return d.innerHTML;
   }
 
+  // ---------- minimal ZIP writer (store method, no external deps) ----------
+  var crc32Table = null;
+  function crc32(bytes){
+    if (!crc32Table) {
+      crc32Table = [];
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        crc32Table[n] = c >>> 0;
+      }
+    }
+    var crc = 0 ^ (-1);
+    for (var i = 0; i < bytes.length; i++) crc = (crc >>> 8) ^ crc32Table[(crc ^ bytes[i]) & 0xFF];
+    return (crc ^ (-1)) >>> 0;
+  }
+  function utf8Bytes(str){ return new TextEncoder().encode(str); }
+  function base64ToBytes(dataUrl){
+    var base64 = dataUrl.split(",")[1] || "";
+    var binary = atob(base64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  function buildZip(files){
+    var localParts = [], centralParts = [], offset = 0;
+    files.forEach(function(f){
+      var nameBytes = utf8Bytes(f.name);
+      var crc = crc32(f.data);
+      var size = f.data.length;
+
+      var local = new Uint8Array(30 + nameBytes.length);
+      var ldv = new DataView(local.buffer);
+      ldv.setUint32(0, 0x04034b50, true);
+      ldv.setUint16(4, 20, true);
+      ldv.setUint16(6, 0, true);
+      ldv.setUint16(8, 0, true);
+      ldv.setUint16(10, 0, true);
+      ldv.setUint16(12, 0x21, true);
+      ldv.setUint32(14, crc, true);
+      ldv.setUint32(18, size, true);
+      ldv.setUint32(22, size, true);
+      ldv.setUint16(26, nameBytes.length, true);
+      ldv.setUint16(28, 0, true);
+      local.set(nameBytes, 30);
+      localParts.push(local, f.data);
+
+      var central = new Uint8Array(46 + nameBytes.length);
+      var cdv = new DataView(central.buffer);
+      cdv.setUint32(0, 0x02014b50, true);
+      cdv.setUint16(4, 20, true);
+      cdv.setUint16(6, 20, true);
+      cdv.setUint16(8, 0, true);
+      cdv.setUint16(10, 0, true);
+      cdv.setUint16(12, 0, true);
+      cdv.setUint16(14, 0x21, true);
+      cdv.setUint32(16, crc, true);
+      cdv.setUint32(20, size, true);
+      cdv.setUint32(24, size, true);
+      cdv.setUint16(28, nameBytes.length, true);
+      cdv.setUint16(30, 0, true);
+      cdv.setUint16(32, 0, true);
+      cdv.setUint16(34, 0, true);
+      cdv.setUint16(36, 0, true);
+      cdv.setUint32(38, 0, true);
+      cdv.setUint32(42, offset, true);
+      central.set(nameBytes, 46);
+      centralParts.push(central);
+
+      offset += local.length + f.data.length;
+    });
+
+    var centralOffset = offset;
+    var centralSize = centralParts.reduce(function(s, p){ return s + p.length; }, 0);
+
+    var end = new Uint8Array(22);
+    var edv = new DataView(end.buffer);
+    edv.setUint32(0, 0x06054b50, true);
+    edv.setUint16(8, files.length, true);
+    edv.setUint16(10, files.length, true);
+    edv.setUint32(12, centralSize, true);
+    edv.setUint32(16, centralOffset, true);
+
+    return new Blob(localParts.concat(centralParts, [end]), { type: "application/zip" });
+  }
+
+  function slugify(str){
+    return (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "voce";
+  }
+
+  function fmtCompactDate(iso){
+    var d = new Date(iso);
+    return d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
+  }
+
+  function exportZip(){
+    if (experiences.length === 0) return;
+    var t = currentTrip();
+    var tripName = t ? t.name : "Vacanza";
+    var files = [];
+    var usedNames = {};
+    function uniqueName(base, ext){
+      var name = base + ext, n = 2;
+      while (usedNames[name]) { name = base + "-" + n + ext; n++; }
+      usedNames[name] = true;
+      return name;
+    }
+    var lines = ["DIARIO DI VIAGGIO — " + tripName, "Esportato il " + new Date().toLocaleString("it-IT"), ""];
+
+    experiences.forEach(function(exp){
+      var photos = getPhotos(exp);
+      var dateCompact = fmtCompactDate(exp.createdAt);
+      var slug = slugify(exp.note || exp.title || "");
+      var base = dateCompact + "_" + slug;
+
+      lines.push("---");
+      lines.push(fmtDayLabel(fmtDayKey(exp.createdAt)) + " " + fmtTime(exp.createdAt));
+      lines.push("Titolo: " + (exp.title || ""));
+      if (exp.note) lines.push("Nota: " + exp.note);
+      if (exp.location) lines.push("Posizione: https://www.google.com/maps?q=" + exp.location.lat + "," + exp.location.lng);
+
+      photos.forEach(function(photoSrc, i){
+        var suffix = photos.length > 1 ? ("_" + (i + 1)) : "";
+        var fname = uniqueName(base + suffix, ".jpg");
+        files.push({ name: fname, data: base64ToBytes(photoSrc) });
+        lines.push("Foto: " + fname);
+      });
+      if (exp.audio) {
+        var aname = uniqueName(base, ".webm");
+        files.push({ name: aname, data: base64ToBytes(exp.audio) });
+        lines.push("Audio: " + aname + " (" + fmtDuration(exp.audioDuration) + ")");
+      }
+      lines.push("");
+    });
+
+    files.unshift({ name: "registro.txt", data: utf8Bytes(lines.join("\n")) });
+
+    var blob = buildZip(files);
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = slugify(tripName) + "-export.zip";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  }
+
   // ---------- state ----------
   var experiences = [];
   var trips = [];
@@ -527,6 +710,7 @@
     var content = document.getElementById("content");
     var printBtn = document.getElementById("printBtn");
     printBtn.disabled = experiences.length === 0;
+    document.getElementById("zipBtn").disabled = experiences.length === 0;
 
     if (experiences.length === 0) {
       content.innerHTML =
@@ -578,7 +762,14 @@
     });
   }
 
+  function getPhotos(exp){
+    if (exp.photos && exp.photos.length) return exp.photos;
+    if (exp.photo) return [exp.photo];
+    return [];
+  }
+
   function renderPostcard(exp){
+    var photos = getPhotos(exp);
     var out = '<div class="postcard" data-id="' + exp.id + '">';
     out += '<div class="stamp"><span>' + fmtTime(exp.createdAt) + '</span></div>';
     if (exp._saved === false) {
@@ -587,7 +778,15 @@
         '<button data-id="' + exp.id + '">Riprova</button></div>';
     }
     out += '<div class="card-body">';
-    if (exp.photo) out += '<img src="' + exp.photo + '" alt="">';
+    if (photos.length) {
+      out += '<div class="card-cover" style="position:relative;">';
+      out += '<img src="' + photos[0] + '" alt="">';
+      if (photos.length > 1) out += '<span class="photo-count-badge">' + photos.length + ' foto</span>';
+      out += '</div>';
+      out += '<div class="card-print-gallery">' +
+        photos.map(function(src){ return '<img src="' + src + '" alt="">'; }).join('') +
+        '</div>';
+    }
     out += '<h3>' + escapeHtml(exp.title || "Senza titolo") + '</h3>';
     if (exp.note) out += '<p class="note">' + escapeHtml(exp.note) + '</p>';
     var tags = "";
@@ -610,6 +809,41 @@
     });
   }
 
+  // ---------- lightbox ----------
+  var lightboxOverlay = document.getElementById("lightboxOverlay");
+  var lightboxImg = document.getElementById("lightboxImg");
+  var lightboxCounter = document.getElementById("lightboxCounter");
+  var lightboxPrev = document.getElementById("lightboxPrev");
+  var lightboxNext = document.getElementById("lightboxNext");
+  var lightboxPhotos = [];
+  var lightboxIndex = 0;
+
+  function openLightbox(photos, index){
+    lightboxPhotos = photos;
+    lightboxIndex = index;
+    updateLightbox();
+    lightboxOverlay.classList.remove("hidden");
+  }
+  function updateLightbox(){
+    lightboxImg.src = lightboxPhotos[lightboxIndex];
+    var multi = lightboxPhotos.length > 1;
+    lightboxPrev.style.display = multi ? "flex" : "none";
+    lightboxNext.style.display = multi ? "flex" : "none";
+    lightboxCounter.textContent = multi ? (lightboxIndex + 1) + " / " + lightboxPhotos.length : "";
+  }
+  document.getElementById("lightboxClose").addEventListener("click", function(){ lightboxOverlay.classList.add("hidden"); });
+  lightboxOverlay.addEventListener("click", function(e){ if (e.target === lightboxOverlay) lightboxOverlay.classList.add("hidden"); });
+  lightboxPrev.addEventListener("click", function(e){
+    e.stopPropagation();
+    lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
+    updateLightbox();
+  });
+  lightboxNext.addEventListener("click", function(e){
+    e.stopPropagation();
+    lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
+    updateLightbox();
+  });
+
   // ---------- detail modal ----------
   var detailOverlay = document.getElementById("detailOverlay");
   var playerAudio = document.getElementById("playerAudio");
@@ -617,10 +851,15 @@
   function openDetail(id){
     var exp = experiences.find(function(e){ return e.id === id; });
     if (!exp) return;
+    var photos = getPhotos(exp);
     document.getElementById("detailTime").textContent = fmtTime(exp.createdAt);
     var body = document.getElementById("detailBody");
     var html = "";
-    if (exp.photo) html += '<img class="detail-img" src="' + exp.photo + '">';
+    if (photos.length) {
+      html += '<div class="bulk-grid" id="detailPhotoGrid" style="margin-bottom:16px;">' +
+        photos.map(function(src, i){ return '<div class="thumb" data-idx="' + i + '"><img src="' + src + '"></div>'; }).join("") +
+        '</div>';
+    }
     html += '<h2 class="detail-title">' + escapeHtml(exp.title || "Senza titolo") + '</h2>';
     if (exp.note) html += '<p class="detail-note">' + escapeHtml(exp.note) + '</p>';
     if (exp.audio) {
@@ -634,6 +873,14 @@
     }
     html += '<div id="deleteZone"><button class="del-btn" id="delBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Elimina esperienza</button></div>';
     body.innerHTML = html;
+
+    if (photos.length) {
+      body.querySelectorAll("#detailPhotoGrid .thumb").forEach(function(el){
+        el.addEventListener("click", function(){
+          openLightbox(photos, parseInt(el.getAttribute("data-idx"), 10));
+        });
+      });
+    }
 
     if (exp.audio) {
       var playBtn = document.getElementById("playBtn");
@@ -687,7 +934,7 @@
   document.getElementById("tripClose").addEventListener("click", function(){ tripOverlay.classList.add("hidden"); });
   tripOverlay.addEventListener("click", function(e){ if (e.target === tripOverlay) tripOverlay.classList.add("hidden"); });
 
-  function renderTripList(pendingDeleteId){
+  function renderTripList(pendingDeleteId, editingId){
     var countsPromises = trips.map(function(t){ return dbGetByTrip(t.id).then(function(items){ return { id: t.id, count: items.length }; }); });
     Promise.all(countsPromises).then(function(counts){
       var countMap = {};
@@ -698,16 +945,29 @@
         var n = countMap[t.id] || 0;
         var dateLabel = new Date(t.createdAt).toLocaleDateString("it-IT");
         html += '<div class="trip-row' + (isActive ? ' active' : '') + '">';
-        html += '<button class="trip-select" data-id="' + t.id + '"><div class="trip-row-main">' +
-          '<div class="trip-row-name">' + escapeHtml(t.name) + (isActive ? ' ✓' : '') + '</div>' +
-          '<div class="trip-row-meta">' + n + (n === 1 ? ' esperienza' : ' esperienze') + ' · creata il ' + dateLabel + '</div>' +
-          '</div></button>';
-        if (pendingDeleteId === t.id) {
-          html += '<div style="display:flex;gap:6px;align-items:center;">' +
-            '<button class="trip-del" data-confirm-id="' + t.id + '" style="border:1px solid var(--error-text);border-radius:999px;font-size:11px;padding:4px 8px;">Elimina</button>' +
-            '<button class="trip-del" data-cancel="1" style="color:var(--gray-text);">Annulla</button></div>';
+
+        if (editingId === t.id) {
+          html += '<div style="flex:1;display:flex;gap:8px;">' +
+            '<input class="trip-edit-input" data-edit-input="' + t.id + '" value="' + escapeHtml(t.name) + '" ' +
+            'style="flex:1;background:var(--field-bg);border:none;border-radius:10px;padding:8px 10px;font-size:14px;color:var(--ink);outline:none;">' +
+            '<button data-save-id="' + t.id + '" style="background:var(--coral);color:#fff;border:none;border-radius:10px;padding:0 12px;font-size:13px;font-weight:600;">Salva</button>' +
+            '<button data-cancel-edit="1" style="background:none;border:none;color:var(--gray-text);font-size:13px;">Annulla</button>' +
+            '</div>';
         } else {
-          html += '<button class="trip-del" data-del-id="' + t.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>';
+          html += '<button class="trip-select" data-id="' + t.id + '"><div class="trip-row-main">' +
+            '<div class="trip-row-name">' + escapeHtml(t.name) + (isActive ? ' ✓' : '') + '</div>' +
+            '<div class="trip-row-meta">' + n + (n === 1 ? ' esperienza' : ' esperienze') + ' · creata il ' + dateLabel + '</div>' +
+            '</div></button>';
+          if (pendingDeleteId === t.id) {
+            html += '<div style="display:flex;gap:6px;align-items:center;">' +
+              '<button class="trip-del" data-confirm-id="' + t.id + '" style="border:1px solid var(--error-text);border-radius:999px;font-size:11px;padding:4px 8px;">Elimina</button>' +
+              '<button class="trip-del" data-cancel="1" style="color:var(--gray-text);">Annulla</button></div>';
+          } else {
+            html += '<div style="display:flex;gap:2px;">' +
+              '<button class="trip-del" data-edit-id="' + t.id + '" style="color:var(--ink-soft);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>' +
+              '<button class="trip-del" data-del-id="' + t.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>' +
+              '</div>';
+          }
         }
         html += '</div>';
       });
@@ -726,6 +986,35 @@
           renderTripList(btn.getAttribute("data-del-id"));
         });
       });
+      tripList.querySelectorAll("[data-edit-id]").forEach(function(btn){
+        btn.addEventListener("click", function(e){
+          e.stopPropagation();
+          renderTripList(null, btn.getAttribute("data-edit-id"));
+          var input = tripList.querySelector("[data-edit-input]");
+          if (input) { input.focus(); input.select(); }
+        });
+      });
+      tripList.querySelectorAll("[data-save-id]").forEach(function(btn){
+        btn.addEventListener("click", function(e){
+          e.stopPropagation();
+          var id = btn.getAttribute("data-save-id");
+          var input = tripList.querySelector('[data-edit-input="' + id + '"]');
+          var newName = input ? input.value.trim() : "";
+          if (!newName) { renderTripList(); return; }
+          var t = trips.find(function(x){ return x.id === id; });
+          t.name = newName;
+          dbPutTrip(t).then(function(){
+            renderTripPill();
+            renderTripList();
+          });
+        });
+      });
+      tripList.querySelectorAll("[data-edit-input]").forEach(function(input){
+        input.addEventListener("keydown", function(e){
+          if (e.key === "Enter") { tripList.querySelector('[data-save-id="' + input.getAttribute("data-edit-input") + '"]').click(); }
+          if (e.key === "Escape") { renderTripList(); }
+        });
+      });
       tripList.querySelectorAll("[data-confirm-id]").forEach(function(btn){
         btn.addEventListener("click", function(e){
           e.stopPropagation();
@@ -733,7 +1022,7 @@
           dbDeleteTripCascade(id).then(function(){
             trips = trips.filter(function(t){ return t.id !== id; });
             if (trips.length === 0) {
-              var fresh = { id: uid(), name: "La mia vacanza", createdAt: new Date().toISOString() };
+              var fresh = { id: uid(), name: "Nuova vacanza", createdAt: new Date().toISOString() };
               trips = [fresh];
               return dbPutTrip(fresh).then(function(){ return fresh.id; });
             }
@@ -749,6 +1038,9 @@
         });
       });
       tripList.querySelectorAll("[data-cancel]").forEach(function(btn){
+        btn.addEventListener("click", function(e){ e.stopPropagation(); renderTripList(); });
+      });
+      tripList.querySelectorAll("[data-cancel-edit]").forEach(function(btn){
         btn.addEventListener("click", function(e){ e.stopPropagation(); renderTripList(); });
       });
     });
@@ -773,9 +1065,9 @@
   var fPhotoInput = document.getElementById("f-photo-input");
   var fPhotoBtn = document.getElementById("f-photo-btn");
   var fPhotoLabel = document.getElementById("f-photo-label");
-  var fPhotoPreview = document.getElementById("f-photo-preview");
-  var fPhotoImg = document.getElementById("f-photo-img");
-  var fPhotoRemove = document.getElementById("f-photo-remove");
+  var fPhotoGallery = document.getElementById("f-photo-gallery");
+  var fPhotoCount = document.getElementById("f-photo-count");
+  var fPhotoGrid = document.getElementById("f-photo-grid");
   var fAudioBtn = document.getElementById("f-audio-btn");
   var fAudioLabel = document.getElementById("f-audio-label");
   var fLocBtn = document.getElementById("f-loc-btn");
@@ -786,7 +1078,7 @@
   var fSave = document.getElementById("f-save");
   var fHint = document.getElementById("f-hint");
 
-  var formState = { photo:null, audio:null, audioDuration:0, location:null };
+  var formState = { photos:[], audio:null, audioDuration:0, location:null };
   var recording = false, recSeconds = 0, recTimer = null;
   var mediaRecorder = null, recChunks = [], recStream = null;
   var saving = false, locBusy = false;
@@ -794,9 +1086,11 @@
   function resetForm(){
     fTitle.value = "";
     fNote.value = "";
-    formState = { photo:null, audio:null, audioDuration:0, location:null };
-    fPhotoPreview.classList.add("hidden");
-    fPhotoLabel.textContent = "Foto";
+    formState = { photos:[], audio:null, audioDuration:0, location:null };
+    fPhotoGallery.classList.add("hidden");
+    fPhotoGrid.innerHTML = "";
+    fPhotoInput.value = "";
+    fPhotoLabel.textContent = "Aggiungi foto";
     fAudioBtn.className = "chip";
     fAudioLabel.textContent = "Registra audio";
     fAudioBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg><span id="f-audio-label">Registra audio</span>';
@@ -810,9 +1104,10 @@
   }
 
   function updateSaveState(){
-    var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photo || formState.audio;
+    var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photos.length > 0 || formState.audio;
     fSave.disabled = !canSave || saving;
     fHint.style.display = canSave ? "none" : "block";
+    fSave.textContent = "Salva nel diario";
   }
   fTitle.addEventListener("input", updateSaveState);
   fNote.addEventListener("input", updateSaveState);
@@ -826,27 +1121,55 @@
 
   fPhotoBtn.addEventListener("click", function(){ fPhotoInput.click(); });
   fPhotoInput.addEventListener("change", function(){
-    var file = fPhotoInput.files && fPhotoInput.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(){
-      resizeImage(reader.result).then(function(resized){
-        formState.photo = resized;
-        fPhotoImg.src = resized;
-        fPhotoPreview.classList.remove("hidden");
-        fPhotoLabel.textContent = "Cambia foto";
+    var files = fPhotoInput.files ? Array.prototype.slice.call(fPhotoInput.files) : [];
+    if (files.length === 0) return;
+
+    fPhotoLabel.textContent = "Elaborazione...";
+    Promise.all(files.map(function(file){
+      return new Promise(function(resolve){
+        var reader = new FileReader();
+        reader.onload = function(){
+          resizeImage(reader.result).then(function(resized){ resolve(resized); });
+        };
+        reader.readAsDataURL(file);
+      });
+    })).then(function(resizedList){
+      formState.photos = formState.photos.concat(resizedList);
+      fPhotoInput.value = "";
+      fPhotoLabel.textContent = "Aggiungi foto";
+      renderFormGallery();
+      updateSaveState();
+    });
+  });
+
+  function renderFormGallery(){
+    if (formState.photos.length === 0) {
+      fPhotoGallery.classList.add("hidden");
+      fPhotoGrid.innerHTML = "";
+      return;
+    }
+    fPhotoGallery.classList.remove("hidden");
+    fPhotoCount.textContent = formState.photos.length + (formState.photos.length === 1 ? " foto aggiunta" : " foto aggiunte");
+    fPhotoGrid.innerHTML = formState.photos.map(function(src, i){
+      return '<div class="thumb" data-idx="' + i + '"><img src="' + src + '">' +
+        '<button class="thumb-remove" data-remove-idx="' + i + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+    }).join("");
+
+    fPhotoGrid.querySelectorAll(".thumb").forEach(function(el){
+      el.addEventListener("click", function(e){
+        if (e.target.closest("[data-remove-idx]")) return;
+        openLightbox(formState.photos, parseInt(el.getAttribute("data-idx"), 10));
+      });
+    });
+    fPhotoGrid.querySelectorAll("[data-remove-idx]").forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        formState.photos.splice(parseInt(btn.getAttribute("data-remove-idx"), 10), 1);
+        renderFormGallery();
         updateSaveState();
       });
-    };
-    reader.readAsDataURL(file);
-  });
-  fPhotoRemove.addEventListener("click", function(){
-    formState.photo = null;
-    fPhotoPreview.classList.add("hidden");
-    fPhotoLabel.textContent = "Foto";
-    fPhotoInput.value = "";
-    updateSaveState();
-  });
+    });
+  }
 
   function stopRecordingIfActive(){
     if (recording && mediaRecorder) { mediaRecorder.stop(); }
@@ -929,7 +1252,7 @@
   });
 
   fSave.addEventListener("click", function(){
-    var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photo || formState.audio;
+    var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photos.length > 0 || formState.audio;
     if (!canSave || saving) return;
     fSizeError.classList.add("hidden");
 
@@ -938,7 +1261,7 @@
       tripId: currentTripId,
       title: fTitle.value.trim() || ("Esperienza delle " + new Date().toLocaleTimeString("it-IT", {hour:"2-digit", minute:"2-digit"})),
       note: fNote.value.trim(),
-      photo: formState.photo,
+      photos: formState.photos.slice(),
       audio: formState.audio,
       audioDuration: formState.audioDuration,
       location: formState.location,
@@ -947,7 +1270,7 @@
 
     var approxBytes = JSON.stringify(exp).length;
     if (approxBytes > 20 * 1024 * 1024) {
-      fSizeError.textContent = "Questa esperienza è troppo pesante per essere salvata. Prova a rimuovere la foto oppure a registrare un audio più breve.";
+      fSizeError.textContent = "Questa esperienza è troppo pesante per essere salvata. Prova a togliere qualche foto oppure a registrare un audio più breve.";
       fSizeError.classList.remove("hidden");
       return;
     }
@@ -969,6 +1292,7 @@
 
   // ---------- print ----------
   document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  document.getElementById("zipBtn").addEventListener("click", function(){ exportZip(); });
 
 })();
 </script>
