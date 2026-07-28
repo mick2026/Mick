@@ -62,6 +62,8 @@
   .day-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
   .day-label{font-family:var(--font-mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--foam);white-space:nowrap;}
   .day-rule{flex:1;height:1px;background:var(--hairline);}
+  .day-zip-btn{background:none;border:1px solid var(--foam-border);color:var(--foam);border-radius:999px;
+    width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .cards{display:flex;flex-direction:column;gap:18px;}
 
   .postcard{background:var(--paper);border-radius:6px;box-shadow:0 8px 20px -8px rgba(0,0,0,.45);position:relative;overflow:hidden;cursor:pointer;}
@@ -183,7 +185,7 @@
   .print-only{display:none;}
   @media print{
     body{background:#fff !important;}
-    header,.fab,.overlay,.unsaved,.trip-bar{display:none !important;}
+    header,.fab,.overlay,.unsaved,.trip-bar,.day-zip-btn{display:none !important;}
     .print-only{display:block !important;padding:0 8px;}
     .print-only h1{font-family:var(--font-display);font-size:30px;font-weight:600;color:var(--ink);margin:0;}
     .print-only p{font-family:var(--font-mono);font-size:12px;color:#5b6d6a;margin-bottom:24px;}
@@ -614,57 +616,58 @@
     return d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
   }
 
-  function exportZip(){
-    if (experiences.length === 0) return;
+  function exportZip(dayKey){
+    var scoped = dayKey ? experiences.filter(function(e){ return fmtDayKey(e.createdAt) === dayKey; }) : experiences;
+    if (scoped.length === 0) return;
+
     var t = currentTrip();
     var tripName = t ? t.name : "Commessa";
+    var opSlug = operatorName ? slugify(operatorName) : "operatore";
     var files = [];
-    var usedNames = {};
-    function uniqueName(base, ext){
-      var name = base + ext, n = 2;
-      while (usedNames[name]) { name = base + "-" + n + ext; n++; }
-      usedNames[name] = true;
-      return name;
-    }
-    var lines = ["REGISTRO DI CANTIERE — " + tripName, "Esportato il " + new Date().toLocaleString("it-IT") + (operatorName ? (" da " + operatorName) : ""), ""];
+    var counters = { jpg: 0, webm: 0, txt: 0 };
 
-    experiences.forEach(function(exp){
-      var photos = getPhotos(exp);
+    function nextName(exp, ext){
       var dateCompact = fmtCompactDate(exp.createdAt);
-      var opValue = (exp.operator || operatorName || "").trim();
-      var opSlug = opValue ? slugify(opValue) : "";
-      var slug = slugify(exp.note || exp.title || "");
-      var base = dateCompact + (opSlug ? ("_" + opSlug) : "") + "_" + slug;
+      var key = ext === ".jpg" ? "jpg" : (ext === ".webm" ? "webm" : "txt");
+      counters[key] += 1;
+      return dateCompact + "_" + opSlug + "_" + counters[key] + ext;
+    }
 
-      lines.push("---");
-      lines.push(fmtDayLabel(fmtDayKey(exp.createdAt)) + " " + fmtTime(exp.createdAt));
-      lines.push("Titolo: " + (exp.title || ""));
+    scoped.forEach(function(exp){
+      var photos = getPhotos(exp);
+      var photoNames = photos.map(function(photoSrc){
+        var fname = nextName(exp, ".jpg");
+        files.push({ name: fname, data: base64ToBytes(photoSrc) });
+        return fname;
+      });
+
+      var audioName = null;
+      if (exp.audio) {
+        audioName = nextName(exp, ".webm");
+        files.push({ name: audioName, data: base64ToBytes(exp.audio) });
+      }
+
+      var lines = [
+        "SOPRALLUOGO — " + tripName,
+        fmtDayLabel(fmtDayKey(exp.createdAt)) + " " + fmtTime(exp.createdAt),
+        "Titolo: " + (exp.title || "")
+      ];
       if (exp.operator) lines.push("Operatore: " + exp.operator);
       if (exp.note) lines.push("Nota: " + exp.note);
       if (exp.location) lines.push("Posizione: https://www.google.com/maps?q=" + exp.location.lat + "," + exp.location.lng);
+      if (photoNames.length) lines.push("Foto: " + photoNames.join(", "));
+      if (audioName) lines.push("Audio: " + audioName + " (" + fmtDuration(exp.audioDuration) + ")");
 
-      photos.forEach(function(photoSrc, i){
-        var suffix = photos.length > 1 ? ("_" + (i + 1)) : "";
-        var fname = uniqueName(base + suffix, ".jpg");
-        files.push({ name: fname, data: base64ToBytes(photoSrc) });
-        lines.push("Foto: " + fname);
-      });
-      if (exp.audio) {
-        var aname = uniqueName(base, ".webm");
-        files.push({ name: aname, data: base64ToBytes(exp.audio) });
-        lines.push("Audio: " + aname + " (" + fmtDuration(exp.audioDuration) + ")");
-      }
-      lines.push("");
+      var txtName = nextName(exp, ".txt");
+      files.push({ name: txtName, data: utf8Bytes(lines.join("\n")) });
     });
-
-    files.unshift({ name: "registro.txt", data: utf8Bytes(lines.join("\n")) });
 
     var blob = buildZip(files);
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    var zipOpSlug = operatorName ? ("-" + slugify(operatorName)) : "";
-    a.download = slugify(tripName) + zipOpSlug + "-" + fmtCompactDate(new Date().toISOString()) + ".zip";
+    var scopeLabel = dayKey ? dayKey.replace(/-/g, "") : ("completa-" + fmtCompactDate(new Date().toISOString()));
+    a.download = slugify(tripName) + "-" + opSlug + "-" + scopeLabel + ".zip";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -770,7 +773,10 @@
     var html = "";
     dayKeys.forEach(function(key){
       html += '<section class="day-section">' +
-        '<div class="day-head"><span class="day-label">' + fmtDayLabel(key) + '</span><span class="day-rule"></span></div>' +
+        '<div class="day-head"><span class="day-label">' + fmtDayLabel(key) + '</span><span class="day-rule"></span>' +
+        '<button class="day-zip-btn" data-day="' + key + '" title="Esporta ZIP di questo giorno" aria-label="Esporta ZIP di questo giorno">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>' +
+        '</div>' +
         '<div class="cards">';
       grouped[key].forEach(function(exp){
         html += renderPostcard(exp);
@@ -778,6 +784,13 @@
       html += '</div></section>';
     });
     content.innerHTML = html;
+
+    content.querySelectorAll(".day-zip-btn").forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        exportZip(btn.getAttribute("data-day"));
+      });
+    });
 
     // wire up card clicks
     content.querySelectorAll(".postcard").forEach(function(el){
@@ -1350,7 +1363,7 @@
 
   // ---------- print ----------
   document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
-  document.getElementById("zipBtn").addEventListener("click", exportZip);
+  document.getElementById("zipBtn").addEventListener("click", function(){ exportZip(); });
 
 })();
 </script>
