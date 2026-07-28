@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0F2B31">
+<title>Diario di Viaggio</title>
+<style>
+  :root{
+    --bg-dark:#0F2B31;
+    --header-bg:rgba(15,43,49,0.92);
+    --header-border:rgba(255,255,255,0.12);
+    --cream:#F6EFDD;
+    --foam:#86B8A8;
+    --foam-border:rgba(134,184,168,0.45);
+    --paper:#FBF6EA;
+    --ink:#1E2B2A;
+    --ink-soft:#3c4a48;
+    --muted:#B9CAC6;
+    --muted-light:#a3ada9;
+    --coral:#E8543F;
+    --coral-soft:rgba(232,84,63,0.10);
+    --coral-border:rgba(232,84,63,0.35);
+    --coral-text:#F6C9C2;
+    --teal-soft:rgba(134,184,168,0.18);
+    --teal-text:#3d7a67;
+    --error-text:#b04434;
+    --gray-text:#86988f;
+    --audio-text:#7a3527;
+    --hairline:rgba(255,255,255,0.10);
+    --field-border:rgba(0,0,0,0.15);
+    --field-bg:rgba(255,255,255,0.6);
+    --font-display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg-dark);font-family:var(--font-body);-webkit-tap-highlight-color:transparent;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea{font-family:inherit;}
+  .hidden{display:none !important;}
+  .wrap{max-width:720px;margin:0 auto;padding:0 16px;}
+
+  header{position:sticky;top:0;z-index:20;background:var(--header-bg);border-bottom:1px solid var(--header-border);backdrop-filter:blur(6px);}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 0;}
+  .brand{display:flex;align-items:center;gap:8px;}
+  .brand h1{font-family:var(--font-display);color:var(--cream);font-size:20px;margin:0;line-height:1;}
+  .brand p{font-family:var(--font-mono);font-size:11px;color:var(--foam);letter-spacing:.05em;margin:2px 0 0;}
+  .compass{width:24px;height:24px;color:var(--coral);flex-shrink:0;}
+  .btn-print{display:flex;align-items:center;gap:6px;font-size:14px;padding:8px 14px;border-radius:999px;border:1px solid var(--foam-border);color:var(--cream);background:transparent;}
+  .btn-print:disabled{opacity:.3;}
+
+  main{padding:24px 0 120px;}
+  .empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:96px 24px;color:var(--muted);}
+  .empty h2{font-family:var(--font-display);font-size:18px;color:var(--cream);margin:8px 0 4px;}
+  .empty p{font-size:14px;max-width:280px;margin:0;}
+
+  .day-section{margin-bottom:36px;}
+  .day-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .day-label{font-family:var(--font-mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--foam);white-space:nowrap;}
+  .day-rule{flex:1;height:1px;background:var(--hairline);}
+  .cards{display:flex;flex-direction:column;gap:18px;}
+
+  .postcard{background:var(--paper);border-radius:6px;box-shadow:0 8px 20px -8px rgba(0,0,0,.45);position:relative;overflow:hidden;cursor:pointer;}
+  .postcard::before{content:'';position:absolute;top:-9px;left:0;right:0;height:18px;
+    background-image:radial-gradient(circle, rgba(15,43,49,1) 8px, transparent 9px);
+    background-size:22px 22px;background-position:-6px -9px;background-repeat:repeat-x;}
+  .stamp{position:absolute;top:10px;right:12px;width:54px;height:54px;border-radius:50%;
+    border:2px dashed var(--coral);display:flex;align-items:center;justify-content:center;
+    transform:rotate(-8deg);background:rgba(232,84,63,0.05);}
+  .stamp span{font-family:var(--font-mono);font-size:11px;color:var(--coral);font-weight:700;}
+  .card-body{padding:16px;padding-top:24px;}
+  .card-body img{width:100%;max-height:288px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:block;}
+  .card-body h3{font-family:var(--font-display);font-size:18px;color:var(--ink);margin:0 0 4px;padding-right:64px;}
+  .card-body p.note{color:var(--ink-soft);font-size:14px;line-height:1.6;white-space:pre-wrap;margin:0;}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .tag{font-family:var(--font-mono);display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 8px;font-size:12px;}
+  .tag.audio{color:var(--coral);background:var(--coral-soft);}
+  .tag.loc{color:var(--teal-text);background:var(--teal-soft);}
+  .unsaved{display:flex;align-items:center;gap:8px;font-size:12px;padding:8px 16px;background:var(--coral-soft);color:var(--error-text);}
+  .unsaved button{background:none;border:1px solid var(--error-text);color:var(--error-text);border-radius:999px;padding:2px 8px;font-size:11px;}
+
+  .fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.4);
+    background:var(--coral);border:none;z-index:20;}
+  .fab svg{width:28px;height:28px;color:#fff;}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:flex-end;justify-content:center;}
+  @media(min-width:640px){.overlay{align-items:center;}}
+  .sheet{width:100%;max-width:440px;max-height:92vh;overflow-y:auto;background:var(--paper);
+    border-radius:16px 16px 0 0;}
+  @media(min-width:640px){.sheet{border-radius:16px;}}
+  .sheet-head{position:sticky;top:0;z-index:1;background:var(--paper);display:flex;align-items:center;
+    justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.06);}
+  .sheet-head .title{font-family:var(--font-display);font-size:18px;color:var(--ink);}
+  .sheet-head button{background:none;border:none;color:var(--ink-soft);padding:4px;}
+  .sheet-body{padding:16px;display:flex;flex-direction:column;gap:16px;}
+
+  #f-title{width:100%;font-family:var(--font-display);background:transparent;border:none;
+    border-bottom:1px solid var(--field-border);padding-bottom:8px;font-size:18px;color:var(--ink);outline:none;}
+  #f-note{width:100%;background:var(--field-bg);border-radius:12px;padding:12px;font-size:14px;
+    color:var(--ink-soft);border:none;resize:none;outline:none;}
+  .photo-preview{position:relative;}
+  .photo-preview img{width:100%;border-radius:12px;max-height:224px;object-fit:cover;display:block;}
+  .photo-preview button{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;
+    background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;}
+  .photo-preview button svg{width:16px;height:16px;color:#fff;}
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{display:flex;align-items:center;gap:6px;font-size:14px;padding:8px 14px;border-radius:999px;
+    border:1px solid var(--field-border);color:var(--ink-soft);background:transparent;}
+  .chip.recording{background:var(--coral);color:#fff;border-color:var(--coral);}
+  .chip.remove-audio{border-color:var(--coral-border);color:var(--coral);}
+  .chip:disabled{opacity:.5;}
+  .chip svg{width:16px;height:16px;}
+
+  .msg-error{font-size:12px;color:var(--error-text);margin:0;}
+  .save-btn{width:100%;padding:14px;border-radius:999px;background:var(--coral);color:#fff;
+    font-weight:600;border:none;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;}
+  .save-btn:disabled{opacity:.4;}
+  .save-hint{font-size:12px;text-align:center;color:var(--muted-light);margin:0;}
+
+  .detail-img{width:100%;border-radius:12px;margin-bottom:16px;display:block;}
+  .detail-title{font-family:var(--font-display);font-size:24px;color:var(--ink);margin:0 0 8px;}
+  .detail-note{color:var(--ink-soft);line-height:1.6;white-space:pre-wrap;margin:0 0 16px;}
+  .audio-row{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px;background:var(--coral-soft);margin-bottom:16px;}
+  .play-btn{width:40px;height:40px;border-radius:50%;background:var(--coral);border:none;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .play-btn svg{width:16px;height:16px;color:#fff;}
+  .audio-label{font-size:14px;color:var(--audio-text);}
+  .loc-link{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--teal-text);
+    text-decoration:none;margin-bottom:16px;}
+  .loc-link svg{width:16px;height:16px;}
+  .del-btn{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--error-text);
+    background:none;border:none;padding:0;margin-top:8px;}
+  .del-btn svg{width:16px;height:16px;}
+  .confirm-row{display:flex;align-items:center;gap:10px;font-size:14px;margin-top:8px;}
+  .confirm-row button{background:none;border:none;}
+  .confirm-row .yes{color:var(--error-text);font-weight:600;}
+  .confirm-row .no{color:var(--gray-text);}
+
+  .spin{animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-wrap{display:flex;align-items:center;justify-content:center;padding:96px 0;color:var(--foam);}
+  .loading-wrap svg{width:28px;height:28px;}
+
+  .print-only{display:none;}
+  @media print{
+    body{background:#fff !important;}
+    header,.fab,.overlay,.unsaved{display:none !important;}
+    .print-only{display:block !important;padding:0 8px;}
+    .print-only h1{font-family:var(--font-display);font-size:30px;font-weight:600;color:var(--ink);margin:0;}
+    .print-only p{font-family:var(--font-mono);font-size:12px;color:#5b6d6a;margin-bottom:24px;}
+    .day-rule{background:transparent !important;}
+    .postcard{box-shadow:none !important;border:1px solid #ddd;break-inside:avoid;}
+    .postcard::before{background-image:none;}
+    .stamp{border-color:#999;}
+    .stamp span{color:#333;}
+    .day-section{margin-bottom:24px !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="print-only" id="printHead">
+  <h1>Diario di Viaggio di Emma</h1>
+  <p id="printRange"></p>
+</div>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="brand">
+      <svg class="compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24,7.76 14.12,14.12 7.76,16.24 9.88,9.88"/></svg>
+      <div>
+        <h1>Diario di Viaggio</h1>
+        <p>DI EMMA</p>
+      </div>
+    </div>
+    <button class="btn-print" id="printBtn" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Esporta PDF
+    </button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="loading" class="loading-wrap">
+    <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+  </div>
+  <div id="content" class="hidden"></div>
+</main>
+
+<button class="fab" id="fabAdd" aria-label="Aggiungi esperienza">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<div id="addOverlay" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-head">
+      <span class="title">Nuova esperienza</span>
+      <button id="addClose"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <input id="f-title" placeholder="Titolo (opzionale)">
+      <textarea id="f-note" rows="4" placeholder="Racconta cosa sta succedendo..."></textarea>
+
+      <div id="f-photo-preview" class="photo-preview hidden">
+        <img id="f-photo-img" src="">
+        <button id="f-photo-remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+
+      <div class="chip-row">
+        <input type="file" id="f-photo-input" accept="image/*" capture="environment" class="hidden">
+        <button class="chip" id="f-photo-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span id="f-photo-label">Foto</span>
+        </button>
+
+        <button class="chip" id="f-audio-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          <span id="f-audio-label">Registra audio</span>
+        </button>
+
+        <button class="chip" id="f-loc-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="f-loc-label">Aggiungi posizione</span>
+        </button>
+      </div>
+
+      <p id="f-mic-error" class="msg-error hidden"></p>
+      <p id="f-loc-error" class="msg-error hidden"></p>
+      <p id="f-size-error" class="msg-error hidden"></p>
+
+      <button class="save-btn" id="f-save" disabled>Salva nel diario</button>
+      <p class="save-hint" id="f-hint">Aggiungi una nota, una foto o un audio per salvare</p>
+    </div>
+  </div>
+</div>
+
+<div id="detailOverlay" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-head">
+      <button id="detailClose" style="display:flex;align-items:center;gap:4px;font-size:14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Chiudi
+      </button>
+      <span id="detailTime" style="font-family:var(--font-mono);font-size:12px;color:var(--gray-text);"></span>
+    </div>
+    <div class="sheet-body" id="detailBody"></div>
+  </div>
+</div>
+
+<audio id="playerAudio" class="hidden"></audio>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- IndexedDB ----------
+  var DB_NAME = "diarioViaggioDB";
+  var STORE = "experiences";
+  var dbPromise = new Promise(function(resolve, reject){
+    var req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = function(e){
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: "id" });
+      }
+    };
+    req.onsuccess = function(e){ resolve(e.target.result); };
+    req.onerror = function(e){ reject(e); };
+  });
+
+  function dbPut(exp){
+    return dbPromise.then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, "readwrite");
+        tx.objectStore(STORE).put(exp);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(e){ reject(e); };
+      });
+    });
+  }
+  function dbGetAll(){
+    return dbPromise.then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, "readonly");
+        var req = tx.objectStore(STORE).getAll();
+        req.onsuccess = function(){ resolve(req.result || []); };
+        req.onerror = function(e){ reject(e); };
+      });
+    });
+  }
+  function dbDelete(id){
+    return dbPromise.then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, "readwrite");
+        tx.objectStore(STORE).delete(id);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(e){ reject(e); };
+      });
+    });
+  }
+
+  // ---------- helpers ----------
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+  function resizeImage(dataUrl, maxWidth, quality){
+    maxWidth = maxWidth || 1400; quality = quality || 0.78;
+    return new Promise(function(resolve){
+      var img = new Image();
+      img.onload = function(){
+        var scale = Math.min(1, maxWidth / img.width);
+        var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = function(){ resolve(dataUrl); };
+      img.src = dataUrl;
+    });
+  }
+  function blobToBase64(blob){
+    return new Promise(function(resolve, reject){
+      var r = new FileReader();
+      r.onload = function(){ resolve(r.result); };
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  }
+  function fmtTime(iso){ return new Date(iso).toLocaleTimeString("it-IT", {hour:"2-digit", minute:"2-digit"}); }
+  function fmtDayKey(iso){ return new Date(iso).toISOString().slice(0,10); }
+  function fmtDayLabel(key){
+    var d = new Date(key + "T12:00:00");
+    var s = d.toLocaleDateString("it-IT", {weekday:"long", day:"numeric", month:"long"});
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function fmtDuration(sec){
+    if (sec === null || sec === undefined) return "";
+    var m = Math.floor(sec/60), s = Math.round(sec%60);
+    return m + ":" + String(s).padStart(2,"0");
+  }
+  function escapeHtml(str){
+    var d = document.createElement("div");
+    d.textContent = str || "";
+    return d.innerHTML;
+  }
+
+  // ---------- state ----------
+  var experiences = [];
+  var MAX_RECORD_SECONDS = 240;
+
+  // ---------- load ----------
+  dbGetAll().then(function(items){
+    items.sort(function(a,b){ return new Date(a.createdAt) - new Date(b.createdAt); });
+    experiences = items;
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("content").classList.remove("hidden");
+    render();
+  }).catch(function(){
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("content").classList.remove("hidden");
+    document.getElementById("content").innerHTML =
+      '<div class="empty"><p>Non riesco a leggere il diario salvato su questo dispositivo. Prova a ricaricare la pagina.</p></div>';
+  });
+
+  // ---------- render ----------
+  function render(){
+    var content = document.getElementById("content");
+    var printBtn = document.getElementById("printBtn");
+    printBtn.disabled = experiences.length === 0;
+
+    if (experiences.length === 0) {
+      content.innerHTML =
+        '<div class="empty">' +
+        '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.6;margin-bottom:8px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>' +
+        '<h2>Il diario è ancora vuoto</h2>' +
+        '<p>Premi il pulsante + ogni volta che vuoi fermare un istante della vacanza: una nota, una foto, un audio o dove ti trovi.</p>' +
+        '</div>';
+      document.getElementById("printRange").textContent = "";
+      return;
+    }
+
+    var grouped = {};
+    experiences.forEach(function(exp){
+      var key = fmtDayKey(exp.createdAt);
+      (grouped[key] = grouped[key] || []).push(exp);
+    });
+    var dayKeys = Object.keys(grouped).sort();
+
+    var range = new Date(experiences[0].createdAt).toLocaleDateString("it-IT") + " — " +
+      new Date(experiences[experiences.length-1].createdAt).toLocaleDateString("it-IT");
+    document.getElementById("printRange").textContent = range;
+
+    var html = "";
+    dayKeys.forEach(function(key){
+      html += '<section class="day-section">' +
+        '<div class="day-head"><span class="day-label">' + fmtDayLabel(key) + '</span><span class="day-rule"></span></div>' +
+        '<div class="cards">';
+      grouped[key].forEach(function(exp){
+        html += renderPostcard(exp);
+      });
+      html += '</div></section>';
+    });
+    content.innerHTML = html;
+
+    // wire up card clicks
+    content.querySelectorAll(".postcard").forEach(function(el){
+      el.addEventListener("click", function(){
+        openDetail(el.getAttribute("data-id"));
+      });
+    });
+    content.querySelectorAll(".unsaved button").forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        retrySave(btn.getAttribute("data-id"));
+      });
+    });
+  }
+
+  function renderPostcard(exp){
+    var out = '<div class="postcard" data-id="' + exp.id + '">';
+    out += '<div class="stamp"><span>' + fmtTime(exp.createdAt) + '</span></div>';
+    if (exp._saved === false) {
+      out += '<div class="unsaved"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+        '<span style="flex:1;">Non salvata su questo dispositivo.</span>' +
+        '<button data-id="' + exp.id + '">Riprova</button></div>';
+    }
+    out += '<div class="card-body">';
+    if (exp.photo) out += '<img src="' + exp.photo + '" alt="">';
+    out += '<h3>' + escapeHtml(exp.title || "Senza titolo") + '</h3>';
+    if (exp.note) out += '<p class="note">' + escapeHtml(exp.note) + '</p>';
+    var tags = "";
+    if (exp.audio) tags += '<span class="tag audio"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg> nota audio ' + fmtDuration(exp.audioDuration) + '</span>';
+    if (exp.location) tags += '<span class="tag loc"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/></svg> ' + exp.location.lat.toFixed(3) + ', ' + exp.location.lng.toFixed(3) + '</span>';
+    if (tags) out += '<div class="tags">' + tags + '</div>';
+    out += '</div></div>';
+    return out;
+  }
+
+  function retrySave(id){
+    var exp = experiences.find(function(e){ return e.id === id; });
+    if (!exp) return;
+    dbPut(exp).then(function(){
+      exp._saved = true;
+      render();
+    }).catch(function(){
+      exp._saved = false;
+      render();
+    });
+  }
+
+  // ---------- detail modal ----------
+  var detailOverlay = document.getElementById("detailOverlay");
+  var playerAudio = document.getElementById("playerAudio");
+
+  function openDetail(id){
+    var exp = experiences.find(function(e){ return e.id === id; });
+    if (!exp) return;
+    document.getElementById("detailTime").textContent = fmtTime(exp.createdAt);
+    var body = document.getElementById("detailBody");
+    var html = "";
+    if (exp.photo) html += '<img class="detail-img" src="' + exp.photo + '">';
+    html += '<h2 class="detail-title">' + escapeHtml(exp.title || "Senza titolo") + '</h2>';
+    if (exp.note) html += '<p class="detail-note">' + escapeHtml(exp.note) + '</p>';
+    if (exp.audio) {
+      html += '<div class="audio-row"><button class="play-btn" id="playBtn"><svg id="playIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg></button>' +
+        '<div class="audio-label">Nota audio · ' + fmtDuration(exp.audioDuration) + '</div></div>';
+    }
+    if (exp.location) {
+      html += '<a class="loc-link" target="_blank" rel="noreferrer" href="https://www.google.com/maps?q=' + exp.location.lat + ',' + exp.location.lng + '">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/></svg>' +
+        'Apri posizione in mappa (' + exp.location.lat.toFixed(4) + ', ' + exp.location.lng.toFixed(4) + ')</a>';
+    }
+    html += '<div id="deleteZone"><button class="del-btn" id="delBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Elimina esperienza</button></div>';
+    body.innerHTML = html;
+
+    if (exp.audio) {
+      var playBtn = document.getElementById("playBtn");
+      var playIcon = document.getElementById("playIcon");
+      playBtn.addEventListener("click", function(){
+        if (playerAudio.paused) {
+          playerAudio.src = exp.audio;
+          playerAudio.play();
+        } else {
+          playerAudio.pause();
+        }
+      });
+      playerAudio.onplay = function(){ playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'; };
+      playerAudio.onpause = function(){ playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>'; };
+      playerAudio.onended = function(){ playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>'; };
+    }
+
+    document.getElementById("delBtn").addEventListener("click", function(){
+      document.getElementById("deleteZone").innerHTML =
+        '<div class="confirm-row"><span style="color:var(--ink-soft);">Eliminare definitivamente?</span>' +
+        '<button class="yes" id="confYes">Sì, elimina</button>' +
+        '<button class="no" id="confNo">Annulla</button></div>';
+      document.getElementById("confYes").addEventListener("click", function(){
+        dbDelete(exp.id).finally(function(){
+          experiences = experiences.filter(function(e){ return e.id !== exp.id; });
+          closeDetail();
+          render();
+        });
+      });
+      document.getElementById("confNo").addEventListener("click", function(){ openDetail(id); });
+    });
+
+    detailOverlay.classList.remove("hidden");
+  }
+  function closeDetail(){
+    detailOverlay.classList.add("hidden");
+    playerAudio.pause();
+  }
+  document.getElementById("detailClose").addEventListener("click", closeDetail);
+  detailOverlay.addEventListener("click", function(e){ if (e.target === detailOverlay) closeDetail(); });
+
+  // ---------- add modal ----------
+  var addOverlay = document.getElementById("addOverlay");
+  var fTitle = document.getElementById("f-title");
+  var fNote = document.getElementById("f-note");
+  var fPhotoInput = document.getElementById("f-photo-input");
+  var fPhotoBtn = document.getElementById("f-photo-btn");
+  var fPhotoLabel = document.getElementById("f-photo-label");
+  var fPhotoPreview = document.getElementById("f-photo-preview");
+  var fPhotoImg = document.getElementById("f-photo-img");
+  var fPhotoRemove = document.getElementById("f-photo-remove");
+  var fAudioBtn = document.getElementById("f-audio-btn");
+  var fAudioLabel = document.getElementById("f-audio-label");
+  var fLocBtn = document.getElementById("f-loc-btn");
+  var fLocLabel = document.getElementById("f-loc-label");
+  var fMicError = document.getElementById("f-mic-error");
+  var fLocError = document.getElementById("f-loc-error");
+  var fSizeError = document.getElementById("f-size-error");
+  var fSave = document.getElementById("f-save");
+  var fHint = document.getElementById("f-hint");
+
+  var formState = { photo:null, audio:null, audioDuration:0, location:null };
+  var recording = false, recSeconds = 0, recTimer = null;
+  var mediaRecorder = null, recChunks = [], recStream = null;
+  var saving = false, locBusy = false;
+
+  function resetForm(){
+    fTitle.value = "";
+    fNote.value = "";
+    formState = { photo:null, audio:null, audioDuration:0, location:null };
+    fPhotoPreview.classList.add("hidden");
+    fPhotoLabel.textContent = "Foto";
+    fAudioBtn.className = "chip";
+    fAudioLabel.textContent = "Registra audio";
+    fAudioBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg><span id="f-audio-label">Registra audio</span>';
+    fAudioLabel = document.getElementById("f-audio-label");
+    fLocLabel.textContent = "Aggiungi posizione";
+    fMicError.classList.add("hidden");
+    fLocError.classList.add("hidden");
+    fSizeError.classList.add("hidden");
+    recording = false; recSeconds = 0;
+    updateSaveState();
+  }
+
+  function updateSaveState(){
+    var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photo || formState.audio;
+    fSave.disabled = !canSave || saving;
+    fHint.style.display = canSave ? "none" : "block";
+  }
+  fTitle.addEventListener("input", updateSaveState);
+  fNote.addEventListener("input", updateSaveState);
+
+  document.getElementById("fabAdd").addEventListener("click", function(){
+    resetForm();
+    addOverlay.classList.remove("hidden");
+  });
+  document.getElementById("addClose").addEventListener("click", function(){ addOverlay.classList.add("hidden"); stopRecordingIfActive(); });
+  addOverlay.addEventListener("click", function(e){ if (e.target === addOverlay) { addOverlay.classList.add("hidden"); stopRecordingIfActive(); } });
+
+  fPhotoBtn.addEventListener("click", function(){ fPhotoInput.click(); });
+  fPhotoInput.addEventListener("change", function(){
+    var file = fPhotoInput.files && fPhotoInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      resizeImage(reader.result).then(function(resized){
+        formState.photo = resized;
+        fPhotoImg.src = resized;
+        fPhotoPreview.classList.remove("hidden");
+        fPhotoLabel.textContent = "Cambia foto";
+        updateSaveState();
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  fPhotoRemove.addEventListener("click", function(){
+    formState.photo = null;
+    fPhotoPreview.classList.add("hidden");
+    fPhotoLabel.textContent = "Foto";
+    fPhotoInput.value = "";
+    updateSaveState();
+  });
+
+  function stopRecordingIfActive(){
+    if (recording && mediaRecorder) { mediaRecorder.stop(); }
+    clearInterval(recTimer);
+    recording = false;
+  }
+
+  fAudioBtn.addEventListener("click", function(){
+    if (formState.audio) {
+      formState.audio = null; formState.audioDuration = 0;
+      fAudioBtn.className = "chip";
+      fAudioBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg><span id="f-audio-label">Registra audio</span>';
+      fAudioLabel = document.getElementById("f-audio-label");
+      updateSaveState();
+      return;
+    }
+    if (recording) {
+      mediaRecorder.stop();
+      clearInterval(recTimer);
+      recording = false;
+      formState.audioDuration = recSeconds;
+      return;
+    }
+    fMicError.classList.add("hidden");
+    navigator.mediaDevices.getUserMedia({ audio:true }).then(function(stream){
+      recStream = stream;
+      recChunks = [];
+      mediaRecorder = new MediaRecorder(stream, { audioBitsPerSecond: 64000 });
+      mediaRecorder.ondataavailable = function(e){ if (e.data.size > 0) recChunks.push(e.data); };
+      mediaRecorder.onstop = function(){
+        var blob = new Blob(recChunks, { type:"audio/webm" });
+        blobToBase64(blob).then(function(b64){
+          formState.audio = b64;
+          fAudioBtn.className = "chip remove-audio";
+          fAudioBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Rimuovi audio (' + fmtDuration(formState.audioDuration) + ')</span>';
+          updateSaveState();
+        });
+        stream.getTracks().forEach(function(t){ t.stop(); });
+      };
+      mediaRecorder.start();
+      recording = true;
+      recSeconds = 0;
+      fAudioBtn.className = "chip recording";
+      recTimer = setInterval(function(){
+        recSeconds += 1;
+        fAudioBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg><span>Ferma (' + fmtDuration(recSeconds) + ')</span>';
+        if (recSeconds >= MAX_RECORD_SECONDS) {
+          mediaRecorder.stop();
+          clearInterval(recTimer);
+          recording = false;
+          formState.audioDuration = recSeconds;
+        }
+      }, 1000);
+    }).catch(function(){
+      fMicError.textContent = "Non riesco ad accedere al microfono. Controlla i permessi del browser.";
+      fMicError.classList.remove("hidden");
+    });
+  });
+
+  fLocBtn.addEventListener("click", function(){
+    fLocError.classList.add("hidden");
+    if (!navigator.geolocation) {
+      fLocError.textContent = "Il dispositivo non supporta la geolocalizzazione.";
+      fLocError.classList.remove("hidden");
+      return;
+    }
+    locBusy = true;
+    fLocBtn.disabled = true;
+    navigator.geolocation.getCurrentPosition(function(pos){
+      formState.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      fLocLabel.textContent = "Posizione salvata";
+      locBusy = false;
+      fLocBtn.disabled = false;
+    }, function(){
+      fLocError.textContent = "Posizione non disponibile. Controlla i permessi.";
+      fLocError.classList.remove("hidden");
+      locBusy = false;
+      fLocBtn.disabled = false;
+    }, { enableHighAccuracy:true, timeout:10000 });
+  });
+
+  fSave.addEventListener("click", function(){
+    var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photo || formState.audio;
+    if (!canSave || saving) return;
+    fSizeError.classList.add("hidden");
+
+    var exp = {
+      id: uid(),
+      title: fTitle.value.trim() || ("Esperienza delle " + new Date().toLocaleTimeString("it-IT", {hour:"2-digit", minute:"2-digit"})),
+      note: fNote.value.trim(),
+      photo: formState.photo,
+      audio: formState.audio,
+      audioDuration: formState.audioDuration,
+      location: formState.location,
+      createdAt: new Date().toISOString()
+    };
+
+    var approxBytes = JSON.stringify(exp).length;
+    if (approxBytes > 20 * 1024 * 1024) {
+      fSizeError.textContent = "Questa esperienza è troppo pesante per essere salvata. Prova a rimuovere la foto oppure a registrare un audio più breve.";
+      fSizeError.classList.remove("hidden");
+      return;
+    }
+
+    saving = true;
+    fSave.disabled = true;
+    dbPut(exp).then(function(){
+      exp._saved = true;
+    }).catch(function(){
+      exp._saved = false;
+    }).finally(function(){
+      experiences.push(exp);
+      experiences.sort(function(a,b){ return new Date(a.createdAt) - new Date(b.createdAt); });
+      saving = false;
+      addOverlay.classList.add("hidden");
+      render();
+    });
+  });
+
+  // ---------- print ----------
+  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+
+})();
+</script>
+</body>
+</html>
