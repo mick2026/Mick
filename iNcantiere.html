@@ -197,7 +197,7 @@
     .day-section{margin-bottom:24px !important;}
     .card-cover{display:none !important;}
     .card-print-gallery{display:flex !important;flex-direction:column;gap:10px;margin-bottom:12px;}
-    .card-print-gallery img{width:100%;height:auto;display:block;border-radius:6px;page-break-inside:avoid;}
+    .card-print-gallery img{width:100% !important;height:auto !important;max-height:none !important;object-fit:contain !important;display:block;border-radius:6px;page-break-inside:avoid;margin-bottom:0;}
   }
   .card-print-gallery{display:none;}
 </style>
@@ -624,26 +624,25 @@
     var tripName = t ? t.name : "Commessa";
     var opSlug = operatorName ? slugify(operatorName) : "operatore";
     var files = [];
-    var counters = { jpg: 0, webm: 0, txt: 0 };
+    var counters = { jpg: 0, audio: 0, txt: 0 };
 
-    function nextName(exp, ext){
+    function nextName(exp, typeKey, ext){
       var dateCompact = fmtCompactDate(exp.createdAt);
-      var key = ext === ".jpg" ? "jpg" : (ext === ".webm" ? "webm" : "txt");
-      counters[key] += 1;
-      return dateCompact + "_" + opSlug + "_" + counters[key] + ext;
+      counters[typeKey] += 1;
+      return dateCompact + "_" + opSlug + "_" + counters[typeKey] + ext;
     }
 
     scoped.forEach(function(exp){
       var photos = getPhotos(exp);
       var photoNames = photos.map(function(photoSrc){
-        var fname = nextName(exp, ".jpg");
+        var fname = nextName(exp, "jpg", ".jpg");
         files.push({ name: fname, data: base64ToBytes(photoSrc) });
         return fname;
       });
 
       var audioName = null;
       if (exp.audio) {
-        audioName = nextName(exp, ".webm");
+        audioName = nextName(exp, "audio", ".webm");
         files.push({ name: audioName, data: base64ToBytes(exp.audio) });
       }
 
@@ -658,7 +657,7 @@
       if (photoNames.length) lines.push("Foto: " + photoNames.join(", "));
       if (audioName) lines.push("Audio: " + audioName + " (" + fmtDuration(exp.audioDuration) + ")");
 
-      var txtName = nextName(exp, ".txt");
+      var txtName = nextName(exp, "txt", ".txt");
       files.push({ name: txtName, data: utf8Bytes(lines.join("\n")) });
     });
 
