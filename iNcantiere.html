@@ -319,7 +319,7 @@
   "use strict";
 
   // ---------- IndexedDB ----------
-  var DB_NAME = "diarioViaggioDB";
+  var DB_NAME = "iNcantiereDB";
   var STORE = "experiences";
   var TRIPS_STORE = "trips";
   var dbPromise = new Promise(function(resolve, reject){
@@ -620,12 +620,12 @@
       trips = [firstTrip];
       return dbPutTrip(firstTrip).then(function(){ return firstTrip.id; });
     }
-    var saved = localStorage.getItem("diario_currentTripId");
+    var saved = localStorage.getItem("incantiere_currentTripId");
     var match = trips.find(function(t){ return t.id === saved; });
     return (match || trips[trips.length - 1]).id;
   }).then(function(tripId){
     currentTripId = tripId;
-    localStorage.setItem("diario_currentTripId", currentTripId);
+    localStorage.setItem("incantiere_currentTripId", currentTripId);
     return dbGetByTrip(currentTripId);
   }).then(function(items){
     items.sort(function(a,b){ return new Date(a.createdAt) - new Date(b.createdAt); });
@@ -648,7 +648,7 @@
 
   function switchTrip(tripId){
     currentTripId = tripId;
-    localStorage.setItem("diario_currentTripId", currentTripId);
+    localStorage.setItem("incantiere_currentTripId", currentTripId);
     document.getElementById("loading").classList.remove("hidden");
     document.getElementById("content").classList.add("hidden");
     dbGetByTrip(tripId).then(function(items){
