@@ -317,11 +317,11 @@
       <p style="font-size:13px;color:var(--ink-soft);margin:0;" id="exportChoiceInfo"></p>
       <button class="chip" id="exportDownloadBtn" style="justify-content:center;padding:12px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Scarica file
+        Scarica ZIP (un unico file)
       </button>
       <button class="chip" id="exportShareBtn" style="justify-content:center;padding:12px;border-color:var(--coral);color:var(--coral);">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
-        Condividi (Drive e altre app)
+        Condividi su Drive (foto e file separati)
       </button>
       <p class="msg-error hidden" id="exportShareError"></p>
     </div>
@@ -685,15 +685,17 @@
     var blob = buildZip(files);
     var scopeLabel = dayKey ? dayKey.replace(/-/g, "") : ("completa-" + fmtCompactDate(new Date().toISOString()));
     var zipName = slugify(tripName) + "-" + opSlug + "-" + scopeLabel + ".zip";
-    showExportChoice(blob, zipName);
+    showExportChoice(blob, zipName, files);
   }
 
   var pendingExportBlob = null;
   var pendingExportFilename = "";
+  var pendingExportFiles = [];
 
-  function showExportChoice(blob, filename){
+  function showExportChoice(blob, filename, rawFiles){
     pendingExportBlob = blob;
     pendingExportFilename = filename;
+    pendingExportFiles = rawFiles || [];
     document.getElementById("exportChoiceInfo").textContent = filename;
     document.getElementById("exportShareError").classList.add("hidden");
     document.getElementById("exportChoiceOverlay").classList.remove("hidden");
@@ -712,20 +714,33 @@
     document.getElementById("exportChoiceOverlay").classList.add("hidden");
   });
 
+  // I file .zip non sono nella lista di tipi condivisibili di Android/Chrome (restrizione di
+  // sicurezza di sistema), quindi per il pulsante "Condividi" mandiamo i file veri e propri
+  // (foto, audio, testo) invece dello zip: sono tutti tipi supportati dalla condivisione nativa.
+  function mimeForRawFile(name){
+    if (/\.jpe?g$/i.test(name)) return { type: "image/jpeg", name: name };
+    if (/\.txt$/i.test(name)) return { type: "text/plain", name: name };
+    if (/\.webm$/i.test(name)) return { type: "audio/webm", name: name.replace(/\.webm$/i, ".weba") };
+    return { type: "application/octet-stream", name: name };
+  }
+
   document.getElementById("exportShareBtn").addEventListener("click", function(){
     if (!pendingExportBlob) return;
     var errorEl = document.getElementById("exportShareError");
     errorEl.classList.add("hidden");
     try {
-      var file = new File([pendingExportBlob], pendingExportFilename, { type: "application/zip" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: pendingExportFilename }).then(function(){
+      var shareFiles = pendingExportFiles.map(function(f){
+        var m = mimeForRawFile(f.name);
+        return new File([f.data], m.name, { type: m.type });
+      });
+      if (navigator.canShare && navigator.canShare({ files: shareFiles })) {
+        navigator.share({ files: shareFiles, title: pendingExportFilename }).then(function(){
           document.getElementById("exportChoiceOverlay").classList.add("hidden");
         }).catch(function(){ /* user cancelled the share sheet, keep the choice open */ });
         return;
       }
     } catch (e) { /* fall through to error message below */ }
-    errorEl.textContent = "La condivisione diretta non è supportata da questo browser. Usa \"Scarica file\" e carica manualmente su Drive.";
+    errorEl.textContent = "La condivisione diretta non è riuscita su questo dispositivo (magari troppi file insieme). Usa \"Scarica ZIP\" e carica manualmente su Drive.";
     errorEl.classList.remove("hidden");
   });
 
