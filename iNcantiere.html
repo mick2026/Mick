@@ -307,6 +307,27 @@
   </div>
 </div>
 
+<div id="exportChoiceOverlay" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-head">
+      <span class="title">Esporta ZIP</span>
+      <button id="exportChoiceClose"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <p style="font-size:13px;color:var(--ink-soft);margin:0;" id="exportChoiceInfo"></p>
+      <button class="chip" id="exportDownloadBtn" style="justify-content:center;padding:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Scarica file
+      </button>
+      <button class="chip" id="exportShareBtn" style="justify-content:center;padding:12px;border-color:var(--coral);color:var(--coral);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+        Condividi (Drive e altre app)
+      </button>
+      <p class="msg-error hidden" id="exportShareError"></p>
+    </div>
+  </div>
+</div>
+
 <div id="tripOverlay" class="overlay hidden">
   <div class="sheet">
     <div class="sheet-head">
@@ -662,16 +683,58 @@
     });
 
     var blob = buildZip(files);
-    var url = URL.createObjectURL(blob);
+    var scopeLabel = dayKey ? dayKey.replace(/-/g, "") : ("completa-" + fmtCompactDate(new Date().toISOString()));
+    var zipName = slugify(tripName) + "-" + opSlug + "-" + scopeLabel + ".zip";
+    showExportChoice(blob, zipName);
+  }
+
+  var pendingExportBlob = null;
+  var pendingExportFilename = "";
+
+  function showExportChoice(blob, filename){
+    pendingExportBlob = blob;
+    pendingExportFilename = filename;
+    document.getElementById("exportChoiceInfo").textContent = filename;
+    document.getElementById("exportShareError").classList.add("hidden");
+    document.getElementById("exportChoiceOverlay").classList.remove("hidden");
+  }
+
+  document.getElementById("exportDownloadBtn").addEventListener("click", function(){
+    if (!pendingExportBlob) return;
+    var url = URL.createObjectURL(pendingExportBlob);
     var a = document.createElement("a");
     a.href = url;
-    var scopeLabel = dayKey ? dayKey.replace(/-/g, "") : ("completa-" + fmtCompactDate(new Date().toISOString()));
-    a.download = slugify(tripName) + "-" + opSlug + "-" + scopeLabel + ".zip";
+    a.download = pendingExportFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
-  }
+    document.getElementById("exportChoiceOverlay").classList.add("hidden");
+  });
+
+  document.getElementById("exportShareBtn").addEventListener("click", function(){
+    if (!pendingExportBlob) return;
+    var errorEl = document.getElementById("exportShareError");
+    errorEl.classList.add("hidden");
+    try {
+      var file = new File([pendingExportBlob], pendingExportFilename, { type: "application/zip" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: pendingExportFilename }).then(function(){
+          document.getElementById("exportChoiceOverlay").classList.add("hidden");
+        }).catch(function(){ /* user cancelled the share sheet, keep the choice open */ });
+        return;
+      }
+    } catch (e) { /* fall through to error message below */ }
+    errorEl.textContent = "La condivisione diretta non è supportata da questo browser. Usa \"Scarica file\" e carica manualmente su Drive.";
+    errorEl.classList.remove("hidden");
+  });
+
+  document.getElementById("exportChoiceClose").addEventListener("click", function(){
+    document.getElementById("exportChoiceOverlay").classList.add("hidden");
+  });
+  document.getElementById("exportChoiceOverlay").addEventListener("click", function(e){
+    if (e.target === this) this.classList.add("hidden");
+  });
 
   // ---------- state ----------
   var experiences = [];
