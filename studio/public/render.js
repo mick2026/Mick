@@ -37,7 +37,7 @@ function esercizi(s, modo) {
         : "";
       if (!esito?.tentativo_serio) {
         tentativo += `<label class="btn btn-sec no-print">📷 ${t("caricaTentativo")}
-          <input type="file" accept="image/*" capture="environment" multiple hidden data-tentativo="${i}"></label>
+          <input type="file" accept="image/*" multiple class="file-input" data-tentativo="${i}"></label>
           <p class="nota no-print">${t("notaTentativo")}</p>`;
       }
     } else {

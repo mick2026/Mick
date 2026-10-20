@@ -32,6 +32,7 @@ Object.assign(DIZ.it, {
   err_session_expired: "Sessione scaduta: accedi di nuovo a claude.ai.",
   err_sampling_disabled: "Claude non è attivo per questo account.",
   salvataggioLocale: "Le schede sono salvate solo in questo browser (accesso a claude.ai non disponibile).",
+  immaginiNonDisponibili: "Da qui la pagina non può mandare foto a Claude. Apri il link in Chrome (non nell'app Claude), accedi a claude.ai e riprova.",
 });
 Object.assign(DIZ.en, {
   priv1: "Your cards are saved in your private space on claude.ai: only you can see them, from any device.",
@@ -53,6 +54,7 @@ Object.assign(DIZ.en, {
   err_session_expired: "Session expired: sign in to claude.ai again.",
   err_sampling_disabled: "Claude is not enabled for this account.",
   salvataggioLocale: "Cards are saved only in this browser (claude.ai storage not available).",
+  immaginiNonDisponibili: "This view can't send photos to Claude. Open the link in Chrome (not in the Claude app), sign in to claude.ai and try again.",
 });
 
 // ---------- capacità della pagina ----------
@@ -149,16 +151,37 @@ function caricamento(chiavi) {
 }
 const MSG_CARICAMENTO = ["car1", "car2", "car3", "car4", "car5"];
 
+// Legge la foto con il metodo migliore disponibile su questo telefono.
+async function decodifica(file) {
+  try {
+    return await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {}
+  try {
+    return await createImageBitmap(file);
+  } catch {}
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img;
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
 // Ricodifica in JPEG ridotto: peso minore e niente metadati EXIF.
 async function preparaFoto(file) {
-  const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
-  const scala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const bmp = await decodifica(file);
+  const w = bmp.naturalWidth || bmp.width;
+  const h = bmp.naturalHeight || bmp.height;
+  const scala = Math.min(1, 1600 / Math.max(w, h));
   const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * scala);
-  c.height = Math.round(bmp.height * scala);
+  c.width = Math.round(w * scala);
+  c.height = Math.round(h * scala);
   c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
   bmp.close?.();
-  const blob = await new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.85));
+  const blob = (await new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.85))) ?? file;
   return { blob, anteprima: URL.createObjectURL(blob) };
 }
 
@@ -359,9 +382,10 @@ function vistaNuova() {
     <h1>${t("fotografa")}</h1>
     <p>${t("fotografaTesto")}</p>
     <div class="foto-azioni">
-      <label class="btn btn-pri">📷 ${t("scatta")}<input type="file" accept="image/*" capture="environment" hidden id="in-camera"></label>
-      <label class="btn btn-sec">🖼️ ${t("galleria")}<input type="file" accept="image/*" multiple hidden id="in-galleria"></label>
+      <label class="btn btn-pri">📷 ${t("scatta")}<input type="file" accept="image/*" capture="environment" class="file-input" id="in-camera"></label>
+      <label class="btn btn-sec">🖼️ ${t("galleria")}<input type="file" accept="image/*" multiple class="file-input" id="in-galleria"></label>
     </div>
+    <div class="avvisi" id="avviso-immagini" hidden></div>
     <div class="anteprime">${bozza.foto.map((f, i) => `<figure><img src="${f.anteprima}" alt="${t("pagina")} ${i + 1}"><button class="x" data-rimuovi="${i}" aria-label="${t("rimuovi")}">×</button></figure>`).join("")}</div>
     <p class="nota">${t("contaFoto").replace("{n}", bozza.foto.length).replace("{max}", max)} · ${t("avvisoFoto")}</p>
     <label class="campo" for="note">${t("noteFacoltative")}<textarea id="note" rows="2" maxlength="500" placeholder="${t("notePlaceholder")}">${esc(bozza.note)}</textarea></label>
@@ -384,6 +408,12 @@ function vistaNuova() {
   };
   $("#in-camera").onchange = (e) => aggiungi(e.target.files);
   $("#in-galleria").onchange = (e) => aggiungi(e.target.files);
+  capPronte.then(() => {
+    const avviso = $("#avviso-immagini");
+    if (!avviso || (cap.sample && cap.limiti?.images)) return;
+    avviso.textContent = cap.sample ? t("immaginiNonDisponibili") : t("claudeNonDisponibile");
+    avviso.hidden = false;
+  });
   $("#note").oninput = (e) => (bozza.note = e.target.value);
   app.onclick = (ev) => {
     if (ev.target.id === "cambia") return (bozza.materia = null), vistaNuova();
@@ -628,7 +658,7 @@ function vistaImpostazioni() {
     <p class="nota">${cap.store ? t("priv1") : t("salvataggioLocale")}</p>
     <div class="foto-azioni">
       <button class="btn btn-sec" id="backup">⬇️ ${t("backup")}</button>
-      <label class="btn btn-sec">⬆️ ${t("ripristina")}<input type="file" accept="application/json,.json" hidden id="ripristina"></label>
+      <label class="btn btn-sec">⬆️ ${t("ripristina")}<input type="file" accept="application/json,.json" class="file-input" id="ripristina"></label>
       <button class="btn btn-ghost pericolo" id="cancella">🗑️ ${t("cancellaTutto")}</button>
     </div>
     <p><button class="link" data-vai="privacy">${t("leggiPrivacy")}</button></p>

@@ -273,8 +273,8 @@ function vistaNuova() {
     <h1>${t("fotografa")}</h1>
     <p>${t("fotografaTesto")}</p>
     <div class="foto-azioni">
-      <label class="btn btn-pri">📷 ${t("scatta")}<input type="file" accept="image/*" capture="environment" multiple hidden id="in-camera"></label>
-      <label class="btn btn-sec">🖼️ ${t("galleria")}<input type="file" accept="image/*" multiple hidden id="in-galleria"></label>
+      <label class="btn btn-pri">📷 ${t("scatta")}<input type="file" accept="image/*" capture="environment" multiple class="file-input" id="in-camera"></label>
+      <label class="btn btn-sec">🖼️ ${t("galleria")}<input type="file" accept="image/*" multiple class="file-input" id="in-galleria"></label>
     </div>
     <div class="anteprime">${bozza.immagini.map((img, i) => `<figure><img src="${img.anteprima}" alt="${t("pagina")} ${i + 1}"><button class="x" data-rimuovi="${i}" aria-label="${t("rimuovi")}">×</button></figure>`).join("")}</div>
     <p class="nota">${t("contaFoto").replace("{n}", bozza.immagini.length).replace("{max}", 8)} · ${t("avvisoFoto")}</p>
