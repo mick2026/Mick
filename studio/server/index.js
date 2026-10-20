@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
 import * as V from "./validate.js";
@@ -9,10 +10,14 @@ import { generaScheda, generaRipasso, verificaTentativo, RifiutoError } from "./
 import { schedaDemo, verificaDemo } from "./demo.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// Impostazioni facoltative dal file .env (vedi .env.example).
+try {
+  process.loadEnvFile(path.resolve(here, "../.env"));
+} catch {}
 const PUBLIC = path.resolve(here, "../public");
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || "127.0.0.1";
-const DEMO = process.env.DEMO === "1";
+const DEMO = process.env.DEMO === "1" || process.argv.includes("--demo");
 const ACCESS_CODE = process.env.APP_ACCESS_CODE || "";
 const MAX_BODY = 30 * 1024 * 1024;
 
@@ -140,4 +145,10 @@ http
     const url = new URL(req.url, "http://localhost");
     (url.pathname.startsWith("/api/") ? gestisciApi : servStatico)(req, res, url).catch(() => invia(res, 500, { errore: "Errore interno." }));
   })
-  .listen(PORT, HOST, () => console.log(`Studio Amico su http://${HOST}:${PORT}${DEMO ? " (DEMO)" : ""}`));
+  .listen(PORT, HOST, () => {
+    console.log(`Studio Amico pronto${DEMO ? " (DEMO)" : ""}: sul computer apri http://localhost:${PORT}`);
+    if (HOST === "0.0.0.0") {
+      const ips = Object.values(os.networkInterfaces()).flat().filter((i) => i?.family === "IPv4" && !i.internal);
+      for (const i of ips) console.log(`Dal telefono (stessa Wi-Fi) apri http://${i.address}:${PORT}`);
+    }
+  });

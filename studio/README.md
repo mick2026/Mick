@@ -34,12 +34,10 @@ npm run demo                                # prova l'interfaccia senza chiave (
 npm test
 ```
 
-Usarla dal telefono sulla rete di casa:
+In alternativa (anche su Windows) copia `.env.example` in `.env`, inserisci chiave e impostazioni, poi `npm start`.
 
-```bash
-HOST=0.0.0.0 APP_ACCESS_CODE=una-parola-segreta ANTHROPIC_API_KEY=... npm start
-```
-poi apri `http://<ip-del-computer>:8787` sul telefono e inserisci il codice in Impostazioni.
+Usarla dal telefono sulla rete di casa: nel file `.env` metti `HOST=0.0.0.0` e un `APP_ACCESS_CODE`.
+All'avvio il server stampa l'indirizzo da aprire sul telefono; inserisci il codice in Impostazioni.
 "Aggiungi a schermata Home" la fa sembrare un'app. Per uso fuori casa serve un hosting con **HTTPS**.
 
 | Variabile | Default | Significato |
