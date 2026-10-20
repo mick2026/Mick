@@ -19,11 +19,13 @@
   :root:not([data-theme="light"]) {
     --bg: #14171D; --card: #1D222B; --ink: #ECEEF2; --ink-soft: #A9B0BD; --pri: #7FA6E0; --pri-ink: #10131A;
     --ok: #7BD19C; --ok-bg: #1F3328; --no: #F0907E; --no-bg: #3A2320; --line: #2E3542; --soft: #232A36;
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #14171D; --card: #1D222B; --ink: #ECEEF2; --ink-soft: #A9B0BD; --pri: #7FA6E0; --pri-ink: #10131A;
   --ok: #7BD19C; --ok-bg: #1F3328; --no: #F0907E; --no-bg: #3A2320; --line: #2E3542; --soft: #232A36;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }

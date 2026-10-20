@@ -1,12 +1,12 @@
 // Rendering delle schede in HTML (usato dall'app, dalla stampa e dall'export HTML).
 import { t, lang } from "./i18n.js";
 
-export const MATERIE = [
+export const ELENCO_MATERIE = [
   ["italiano", "📖"], ["matematica", "➗"], ["fisica", "🧲"], ["scienze", "🔬"], ["storia", "🏛️"],
   ["geografia", "🌍"], ["inglese", "🗣️"], ["latino_greco", "🏺"], ["filosofia", "🤔"], ["arte", "🎨"],
   ["informatica", "💻"], ["educazione_civica", "⚖️"], ["altro", "📚"],
 ];
-export const emojiMateria = (k) => (MATERIE.find(([m]) => m === k) ?? MATERIE.at(-1))[1];
+export const emojiMateria = (k) => (ELENCO_MATERIE.find(([m]) => m === k) ?? ELENCO_MATERIE.at(-1))[1];
 
 export const UMORE_INIZIO = [["poca", "🐢"], ["media", "🙂"], ["tanta", "🚀"]];
 export const UMORE_FINE = [["fatica", "😮‍💨"], ["bene", "🙂"], ["top", "🤩"]];

@@ -1,4 +1,5 @@
 import { MATERIE, LIVELLI, LINGUE } from "./pedagogia.js";
+import { contenutoPerRipasso } from "./prompt.js";
 
 export class InputError extends Error {}
 
@@ -47,14 +48,7 @@ export function ripasso(body) {
   if (!Array.isArray(body.schede) || body.schede.length < 1 || body.schede.length > MAX_SCHEDE_RIPASSO) {
     throw new InputError(`Seleziona da 1 a ${MAX_SCHEDE_RIPASSO} schede.`);
   }
-  // Solo i campi di contenuto: niente metadati personali (umore, date) verso l'API.
-  const schede = body.schede.map((s) => ({
-    titolo: testo(s?.titolo, 300),
-    abstract: testo(s?.abstract, 3000),
-    schema: Array.isArray(s?.schema) ? s.schema.slice(0, 30) : [],
-    concetti_chiave: Array.isArray(s?.concetti_chiave) ? s.concetti_chiave.slice(0, 30) : [],
-    domande: Array.isArray(s?.domande) ? s.domande.slice(0, 20).map((d) => ({ domanda: testo(d?.domanda, 500) })) : [],
-  }));
+  const schede = body.schede.map((s) => contenutoPerRipasso(s, testo));
   return {
     ...contestoBase(body),
     modalita: ["riassunto", "orale", "scritto"].includes(body.modalita) ? body.modalita : "riassunto",

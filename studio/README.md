@@ -22,7 +22,17 @@ Documenti importanti:
 - [`docs/PEDAGOGIA.md`](docs/PEDAGOGIA.md) — ricerche che guidano le attività, per materia
 - [`docs/PRIVACY-SICUREZZA.md`](docs/PRIVACY-SICUREZZA.md) — privacy, sicurezza, GDPR, AI Act, legge italiana sull'IA
 
-## Avvio
+## Versione su claude.ai (dal telefono, senza installare nulla)
+
+`artifact/` contiene la versione pubblicata come pagina su claude.ai: Claude viene chiamato con l'account
+di chi la usa (nessuna chiave API), le schede si salvano nello spazio privato dell'utente, PDF e HTML si scaricano.
+Usa gli stessi testi, grafica e istruzioni didattiche della versione server.
+
+```bash
+node artifact/build.mjs     # crea artifact/studio-amico.html (file unico da pubblicare)
+```
+
+## Avvio (versione server)
 
 Serve Node.js 20+ e una chiave API Anthropic.
 
@@ -60,11 +70,13 @@ server/
   claude.js      chiamate a Claude (output JSON strutturato, fallback in caso di rifiuto)
   pedagogia.js   principi didattici e linee guida per materia inseriti nei prompt
   schemas.js     schema JSON della scheda e della verifica del tentativo
+  prompt.js      istruzioni a Claude (condivise con la versione claude.ai)
   validate.js    validazione degli input
   demo.js        risposte finte per DEMO=1
 public/
   index.html, styles.css (incl. stampa A4), app.js (viste), render.js (scheda),
   i18n.js (traduzioni), db.js (IndexedDB), img.js (ridimensiona e rimuove EXIF), export.js
+artifact/        versione claude.ai: app.js, extra.css, shell.html, build.mjs
 docs/            pedagogia, privacy e sicurezza
 test/            test del server e della validazione
 ```

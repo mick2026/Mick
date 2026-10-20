@@ -3,7 +3,7 @@ import * as db from "./db.js";
 import { preparaImmagine } from "./img.js";
 import { esportaHTML, scarica } from "./export.js";
 import {
-  MATERIE, UMORE_INIZIO, UMORE_FINE, emojiMateria, esc, dataBreve,
+  ELENCO_MATERIE, UMORE_INIZIO, UMORE_FINE, emojiMateria, esc, dataBreve,
   renderScheda, attivaBase, etichetteBase,
 } from "./render.js";
 
@@ -109,7 +109,7 @@ function vistaNuova() {
   if (passo === 2) {
     app.innerHTML = `<section class="pannello">
       <h1>${t("sceltaMateria")}</h1>
-      <div class="materie">${MATERIE.map(([k, e]) => `<button class="chip" data-materia="${k}"><span>${e}</span> ${t("materia_" + k)}</button>`).join("")}</div>
+      <div class="materie">${ELENCO_MATERIE.map(([k, e]) => `<button class="chip" data-materia="${k}"><span>${e}</span> ${t("materia_" + k)}</button>`).join("")}</div>
       <button class="link" id="indietro">← ${t("indietro")}</button>
     </section>`;
     app.onclick = (ev) => {
@@ -128,7 +128,7 @@ function vistaNuova() {
       <label class="btn btn-sec">🖼️ ${t("galleria")}<input type="file" accept="image/*" multiple hidden id="in-galleria"></label>
     </div>
     <div class="anteprime">${bozza.immagini.map((img, i) => `<figure><img src="${img.anteprima}" alt="${t("pagina")} ${i + 1}"><button class="x" data-rimuovi="${i}" aria-label="${t("rimuovi")}">×</button></figure>`).join("")}</div>
-    <p class="nota">${t("contaFoto").replace("{n}", bozza.immagini.length)} · ${t("avvisoFoto")}</p>
+    <p class="nota">${t("contaFoto").replace("{n}", bozza.immagini.length).replace("{max}", 8)} · ${t("avvisoFoto")}</p>
     <label class="campo">${t("noteFacoltative")}<textarea id="note" rows="2" maxlength="500" placeholder="${t("notePlaceholder")}">${esc(bozza.note)}</textarea></label>
     <button class="btn btn-pri grande" id="genera" ${bozza.immagini.length ? "" : "disabled"}>✨ ${t("creaScheda")}</button>
   </section>`;

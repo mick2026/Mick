@@ -16,7 +16,7 @@ const MATERIE_EN = {
   materia_educazione_civica: "Civics", materia_altro: "Other",
 };
 
-const DIZ = {
+export const DIZ = {
   it: {
     ...MATERIE_IT,
     nav_nuova: "Nuova", nav_archivio: "Archivio", nav_ripasso: "Ripasso", nav_impostazioni: "Impostazioni", demo: "DEMO",
@@ -41,9 +41,9 @@ const DIZ = {
     energiaRisposta_poca: "Ci sta! Facciamo una scheda leggera, un passo alla volta 🐢",
     energiaRisposta_media: "Perfetto, si parte! 🙂", energiaRisposta_tanta: "Wow, che energia! Ti metto anche una sfida 🚀",
     sceltaMateria: "Che materia studiamo?", cambia: "cambia",
-    fotografa: "Fotografa pagine e appunti", fotografaTesto: "Una foto per pagina, ben illuminata e dritta. Massimo 8 foto.",
+    fotografa: "Fotografa pagine e appunti", fotografaTesto: "Una foto per pagina, ben illuminata e dritta.",
     scatta: "Scatta foto", galleria: "Dalla galleria", pagina: "Pagina", rimuovi: "Rimuovi",
-    contaFoto: "{n} foto su 8", avvisoFoto: "Niente volti o dati personali, grazie.",
+    contaFoto: "{n} foto su {max}", avvisoFoto: "Niente volti o dati personali, grazie.",
     noteFacoltative: "Note (facoltative)", notePlaceholder: "Es. «la prof chiede soprattutto le date»",
     creaScheda: "Crea la scheda", maxFoto: "Massimo 8 foto.", fotoNonLeggibile: "Non riesco a leggere questa foto.",
     archivio: "Archivio", stampa: "Stampa / PDF", esporta: "Esporta HTML", elimina: "Elimina", sezioni: "Sezioni",
@@ -108,9 +108,9 @@ const DIZ = {
     energiaRisposta_poca: "That's fine! A light card, one step at a time 🐢",
     energiaRisposta_media: "Great, let's go! 🙂", energiaRisposta_tanta: "Wow, what energy! I'll add a challenge 🚀",
     sceltaMateria: "Which subject?", cambia: "change",
-    fotografa: "Photograph pages and notes", fotografaTesto: "One photo per page, well lit and straight. Up to 8 photos.",
+    fotografa: "Photograph pages and notes", fotografaTesto: "One photo per page, well lit and straight.",
     scatta: "Take photos", galleria: "From gallery", pagina: "Page", rimuovi: "Remove",
-    contaFoto: "{n} of 8 photos", avvisoFoto: "No faces or personal data, please.",
+    contaFoto: "{n} of {max} photos", avvisoFoto: "No faces or personal data, please.",
     noteFacoltative: "Notes (optional)", notePlaceholder: "E.g. “the teacher mostly asks about dates”",
     creaScheda: "Create the card", maxFoto: "Up to 8 photos.", fotoNonLeggibile: "I can't read this photo.",
     archivio: "Archive", stampa: "Print / PDF", esporta: "Export HTML", elimina: "Delete", sezioni: "Sections",
