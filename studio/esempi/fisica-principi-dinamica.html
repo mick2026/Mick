@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I tre principi della dinamica · Studio Amico</title>
+<style>:root {
+  --bg: #F6F4EF;
+  --card: #FFFFFF;
+  --ink: #1F2430;
+  --ink-soft: #5A6170;
+  --pri: #2B4C7E;
+  --pri-ink: #FFFFFF;
+  --acc: #F2A93B;
+  --ok: #2E7D4F;
+  --ok-bg: #E4F3EA;
+  --no: #B3402E;
+  --no-bg: #FBE9E5;
+  --line: #E3DFD6;
+  --soft: #EEF2F8;
+  --radius: 14px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171D; --card: #1D222B; --ink: #ECEEF2; --ink-soft: #A9B0BD; --pri: #7FA6E0; --pri-ink: #10131A;
+    --ok: #7BD19C; --ok-bg: #1F3328; --no: #F0907E; --no-bg: #3A2320; --line: #2E3542; --soft: #232A36;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171D; --card: #1D222B; --ink: #ECEEF2; --ink-soft: #A9B0BD; --pri: #7FA6E0; --pri-ink: #10131A;
+  --ok: #7BD19C; --ok-bg: #1F3328; --no: #F0907E; --no-bg: #3A2320; --line: #2E3542; --soft: #232A36;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--font); padding-bottom: 84px; }
+body.export { padding-bottom: 24px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+.hidden { display: none !important; }
+.solo-stampa { display: none; }
+a { color: var(--pri); }
+h1 { font-size: 1.5rem; line-height: 1.25; margin: 0 0 12px; }
+h2 { font-size: 1.15rem; margin: 20px 0 10px; }
+img { max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+.top { display: flex; align-items: center; gap: 10px; max-width: 760px; margin: 0 auto; padding: 14px 16px; }
+.brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--ink); }
+.demo { background: var(--acc); color: #1F2430; border-radius: 999px; font-size: .75rem; padding: 2px 10px; font-weight: 700; }
+
+.tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; background: var(--card);
+  border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
+.tabbar a { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: var(--ink-soft); font-size: .75rem; padding: 4px 10px; border-radius: 10px; }
+.tabbar a span:first-child { font-size: 1.3rem; }
+.tabbar a.attivo { color: var(--pri); background: var(--soft); font-weight: 600; }
+
+.pannello { background: var(--card); border-radius: var(--radius); padding: 20px; margin: 8px 0 16px; border: 1px solid var(--line); }
+.pannello.centro { text-align: center; }
+.testo p { margin: 0 0 10px; }
+.meta { color: var(--ink-soft); font-size: .9rem; margin: 0 0 6px; }
+.nota { color: var(--ink-soft); font-size: .85rem; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 999px; padding: 10px 18px;
+  cursor: pointer; text-decoration: none; font-weight: 600; min-height: 44px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-pri { background: var(--pri); color: var(--pri-ink); }
+.btn-sec { background: var(--soft); color: var(--ink); border: 1px solid var(--line); }
+.btn-ghost { background: transparent; color: var(--ink-soft); }
+.btn.grande { width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 12px; }
+.pericolo { color: var(--no); }
+.link { background: none; border: 0; color: var(--pri); cursor: pointer; padding: 0; text-decoration: underline; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+
+.umore { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+.btn-umore { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100px; padding: 14px 6px; border-radius: var(--radius);
+  border: 2px solid var(--line); background: var(--card); cursor: pointer; font-weight: 600; transition: transform .12s; }
+.btn-umore span { font-size: 2.4rem; line-height: 1; }
+.btn-umore:hover { transform: translateY(-2px); border-color: var(--pri); }
+.btn-umore.scelto { border-color: var(--pri); background: var(--soft); }
+.btn-umore.mini { width: auto; padding: 4px 8px; font-size: 1.4rem; border-width: 1px; }
+
+.materie { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.chip { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+  cursor: pointer; text-align: left; min-height: 44px; }
+.chip:hover { border-color: var(--pri); }
+.modi { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.foto-azioni { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.anteprime { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+.anteprime figure { position: relative; margin: 0; }
+.anteprime img { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+.anteprime .x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; cursor: pointer; }
+
+.campo { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; font-weight: 600; font-size: .95rem; }
+.campo select, .campo input, .campo textarea, textarea { font-weight: 400; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); width: 100%; }
+.check { display: flex; gap: 8px; align-items: flex-start; margin: 14px 0; }
+fieldset { border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; }
+.privacy-lista { padding-left: 4px; list-style: none; }
+.privacy-lista li { margin: 6px 0; }
+
+.caricamento { text-align: center; padding: 80px 16px; }
+.spinner { width: 54px; height: 54px; margin: 0 auto 18px; border-radius: 50%; border: 6px solid var(--soft); border-top-color: var(--pri); animation: gira 1s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } .btn-umore { transition: none; } }
+
+.toast { position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 20px); opacity: 0; background: var(--ink); color: var(--bg);
+  padding: 10px 16px; border-radius: 12px; max-width: calc(100% - 32px); transition: all .25s; pointer-events: none; z-index: 20; }
+.toast.visibile { opacity: 1; transform: translate(-50%, 0); }
+
+.barra-azioni { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.spazio-flex { flex: 1; }
+.banner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--soft); border-radius: 12px; padding: 8px 12px; margin-bottom: 8px; }
+.indice { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0; position: sticky; top: 0; background: var(--bg); z-index: 5; }
+.indice a { white-space: nowrap; padding: 6px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); text-decoration: none; color: var(--ink); font-size: .9rem; }
+
+.scheda-head h1 { font-size: 1.7rem; }
+.sez { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 12px 0; scroll-margin-top: 56px; }
+.sez h2 { margin-top: 0; }
+.abstract { font-size: 1.05rem; }
+.avvisi { background: var(--no-bg); border-radius: 12px; padding: 10px 14px; margin: 10px 0; }
+.avvisi p { margin: 4px 0; }
+.schema { padding-left: 22px; }
+.schema li { margin: 4px 0; }
+.concetti { display: grid; gap: 8px; margin: 0; }
+.concetti div { background: var(--soft); border-radius: 10px; padding: 8px 12px; }
+.concetti dt { font-weight: 700; }
+.concetti dd { margin: 0; }
+.esercizio, .domanda { border-top: 1px solid var(--line); padding: 12px 0; }
+.esercizio:first-of-type, .domanda:first-of-type { border-top: 0; }
+.riga { display: flex; align-items: center; gap: 8px; }
+.num { font-weight: 700; color: var(--ink-soft); }
+.badge { display: inline-block; font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--ink-soft); }
+.d-base { background: var(--ok-bg); color: var(--ok); }
+.d-medio { background: #FFF1D6; color: #8A5A00; }
+.d-avanzato { background: var(--no-bg); color: var(--no); }
+details summary { cursor: pointer; color: var(--pri); font-weight: 600; margin: 6px 0; }
+.esito { border-radius: 12px; padding: 10px 14px; margin: 8px 0; }
+.esito.ok { background: var(--ok-bg); }
+.esito.no { background: var(--no-bg); }
+.pre { white-space: pre-wrap; }
+.traccia { background: var(--soft); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+.domanda textarea { margin: 6px 0; }
+.vf-lista { padding-left: 22px; }
+.vf { padding: 8px 0; border-top: 1px solid var(--line); }
+.vf p { margin: 0 0 6px; }
+.vf-btn { display: flex; gap: 8px; }
+.btn-vf { background: var(--soft); border: 1px solid var(--line); color: var(--ink); min-width: 90px; }
+.vf.giusto .vf-fb { color: var(--ok); }
+.vf.sbagliato .vf-fb { color: var(--no); }
+.vf-fb { margin-top: 6px !important; font-size: .95rem; }
+.vf-punteggio { font-weight: 700; font-size: 1.1rem; }
+.griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.card-mini { background: var(--soft); border-radius: 12px; padding: 10px 12px; }
+.card-mini p { margin: 4px 0 0; }
+.piano li { margin: 4px 0; }
+.scheda-foot { color: var(--ink-soft); font-size: .8rem; text-align: center; margin: 16px 0; }
+
+.elenco { list-style: none; padding: 0; margin: 0; }
+.elenco li { border-top: 1px solid var(--line); }
+.elenco li a, .elenco.check label { display: flex; flex-direction: column; padding: 10px 4px; text-decoration: none; color: var(--ink); }
+.elenco.check label { flex-direction: row; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.elenco .titolo { font-weight: 600; }
+.elenco .meta { margin: 0; }
+
+.chip-profilo { margin-left: auto; padding: 6px 12px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line);
+  color: var(--ink); text-decoration: none; font-size: .9rem; font-weight: 600; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-profilo[hidden], .tabbar[hidden] { display: none; }
+.profili { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 16px 0; }
+.btn-profilo { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 8px; border-radius: var(--radius);
+  border: 2px solid var(--line); background: var(--card); cursor: pointer; font-weight: 700; font-size: 1.05rem; }
+.btn-profilo span { font-size: 2.2rem; }
+.btn-profilo small { color: var(--ink-soft); font-weight: 400; font-size: .8rem; }
+.btn-profilo:hover { border-color: var(--pri); }
+.aggiungi summary { margin: 8px 0; }
+.sinistra { text-align: left; }
+.centro { text-align: center; }
+.riga-profilo { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; }
+.riquadro { background: var(--soft); border-radius: 12px; padding: 4px 14px 14px; margin: 10px 0; }
+.pericolo-zona { margin: 20px 0 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.pericolo-zona summary { color: var(--no); }
+
+/* ---------- Stampa A4 ---------- */
+@page { size: A4; margin: 15mm 14mm; }
+@media print {
+  :root { --bg: #fff; --card: #fff; --ink: #000; --ink-soft: #444; --soft: #F2F2F2; --line: #CCC; }
+  body { padding: 0; font-size: 11pt; background: #fff; }
+  .no-print, .tabbar, .top, .toast { display: none !important; }
+  .solo-stampa { display: block; }
+  span.solo-stampa { display: inline; }
+  .wrap, .wrap-scheda { max-width: none; padding: 0; }
+  .sez { border: 0; padding: 0; margin: 0 0 8mm; break-inside: auto; }
+  .sez h2 { border-bottom: 1.5pt solid #000; padding-bottom: 2pt; break-after: avoid; }
+  .pagina-nuova { break-before: page; }
+  .esercizio, .domanda, .vf, .concetti div, .card-mini { break-inside: avoid; }
+  .spazio { height: 45mm; border: 1px dashed #BBB; border-radius: 6px; margin-top: 4mm;
+    background: repeating-linear-gradient(#fff 0 7.5mm, #DDD 7.5mm calc(7.5mm + 1px)); }
+  .spazio.piccolo { height: 25mm; }
+  .traccia, .vf-fb, details:not([open]) { display: none !important; }
+  .esito .pre { font-size: 10pt; }
+  .chiave { break-before: page; }
+  .vf-lista { padding-left: 30px; }
+  .chiave ol.semplice { list-style: none; padding: 0; font-size: 10pt; }
+  .scheda-head h1 { font-size: 20pt; }
+  a { color: #000; text-decoration: none; }
+}
+</style>
+</head>
+<body class="export">
+<main class="wrap"><div class="scheda">
+    <header class="scheda-head">
+      <p class="meta">🧲 Fisica · 20 ott 2026 </p>
+      <h1>I tre principi della dinamica</h1>
+    </header>
+    <div class="avvisi" role="note">⚠️ <p>Scheda di esempio creata senza le tue pagine: confrontala con il tuo libro di testo.</p></div>
+    <section class="sez " id="sez-abstract"><h2><span aria-hidden="true">✨</span> In breve</h2><p class="abstract">La dinamica studia il legame tra le forze e il moto. Newton lo riassume in tre principi. Il primo (inerzia) dice che un corpo resta fermo o si muove di moto rettilineo uniforme se la forza risultante che agisce su di lui è nulla: non serve una forza per mantenere il moto, serve per cambiarlo. Il secondo dice di quanto cambia il moto: l&#39;accelerazione è proporzionale alla forza risultante e inversamente proporzionale alla massa (F = m·a). Il terzo dice che le forze nascono sempre a coppie: se A spinge B, B spinge A con una forza uguale e opposta. Le due forze agiscono su corpi diversi, quindi non si annullano. Questi principi valgono nei sistemi di riferimento inerziali.</p></section>
+    <section class="sez " id="sez-schema"><h2><span aria-hidden="true">🗺️</span> Schema degli argomenti</h2><ol class="schema"><li><strong>Primo principio (inerzia)</strong>
+        <ul><li>Forza risultante nulla → velocità costante (anche zero)</li><li>Una forza serve a CAMBIARE il moto, non a mantenerlo</li><li>L&#39;inerzia è la tendenza a conservare lo stato di moto</li></ul>
+        <ol><li><strong>Sistemi di riferimento inerziali</strong><ul><li>Sono quelli in cui vale il primo principio</li><li>Un&#39;auto che frena o curva NON è inerziale</li></ul></li></ol>
+      </li><li><strong>Secondo principio (legge fondamentale)</strong>
+        <ul><li>F = m · a, con F forza risultante</li><li>a ha la stessa direzione e verso di F</li><li>Unità: 1 N = 1 kg · m/s²</li></ul>
+        <ol><li><strong>Caso particolare: il peso</strong><ul><li>P = m · g, con g ≈ 9,8 m/s²</li><li>La massa (kg) non è il peso (N)</li></ul></li></ol>
+      </li><li><strong>Terzo principio (azione e reazione)</strong>
+        <ul><li>Le forze esistono sempre a coppie</li><li>Stesso modulo e direzione, verso opposto</li><li>Agiscono su corpi DIVERSI: non si annullano</li></ul>
+        
+      </li><li><strong>Come si risolve un problema</strong>
+        <ul><li>1. Scegli il corpo</li><li>2. Disegna tutte le forze su di lui (diagramma di corpo libero)</li><li>3. Trova la forza risultante</li><li>4. Applica F = m · a e controlla le unità</li></ul>
+        
+      </li></ol></section>
+    <section class="sez " id="sez-concetti"><h2><span aria-hidden="true">🔑</span> Concetti chiave</h2><dl class="concetti"><div><dt>Forza risultante</dt><dd>La somma vettoriale di tutte le forze che agiscono su un corpo.</dd></div><div><dt>Inerzia</dt><dd>La tendenza di un corpo a mantenere il suo stato di quiete o di moto rettilineo uniforme.</dd></div><div><dt>Massa</dt><dd>Misura dell&#39;inerzia di un corpo; si misura in kg ed è la stessa ovunque.</dd></div><div><dt>Peso</dt><dd>La forza con cui la Terra attira un corpo: P = m·g, si misura in newton.</dd></div><div><dt>Accelerazione</dt><dd>Quanto rapidamente cambia la velocità; si misura in m/s².</dd></div><div><dt>Newton (N)</dt><dd>La forza che dà a 1 kg un&#39;accelerazione di 1 m/s².</dd></div><div><dt>Sistema inerziale</dt><dd>Sistema di riferimento in cui vale il principio d&#39;inerzia.</dd></div></dl></section>
+    <section class="sez pagina-nuova" id="sez-esercizi"><h2><span aria-hidden="true">✏️</span> Esercizi</h2><article class="esercizio">
+      <div class="riga"><span class="badge d-base">Base</span><span class="num">1</span></div>
+      <p>Un carrello di 2,0 kg viene spinto con una forza risultante di 6,0 N. Calcola la sua accelerazione.</p>
+      <details class="no-print"><summary>💡 Suggerimento</summary><p>Quale principio lega forza, massa e accelerazione? Ricava la grandezza che ti serve.</p></details>
+      <div class="spazio solo-stampa"></div>
+      <p class="nota no-print">La soluzione si sblocca nell'app Studio Amico dopo aver caricato un tuo tentativo.</p>
+    </article><article class="esercizio">
+      <div class="riga"><span class="badge d-medio">Medio</span><span class="num">2</span></div>
+      <p>Un&#39;auto di 1200 kg passa da 0 a 20 m/s in 8,0 s. Quanto vale la forza risultante media che agisce su di lei?</p>
+      <details class="no-print"><summary>💡 Suggerimento</summary><p>Prima trova l&#39;accelerazione media a partire dalla variazione di velocità e dal tempo.</p></details>
+      <div class="spazio solo-stampa"></div>
+      <p class="nota no-print">La soluzione si sblocca nell'app Studio Amico dopo aver caricato un tuo tentativo.</p>
+    </article><article class="esercizio">
+      <div class="riga"><span class="badge d-medio">Medio</span><span class="num">3</span></div>
+      <p>Un libro è fermo su un tavolo. Disegna tutte le forze che agiscono sul libro e poi indica qual è la reazione (terzo principio) della forza peso del libro.</p>
+      <details class="no-print"><summary>💡 Suggerimento</summary><p>La reazione del peso NON agisce sul libro: chi è che attira il libro?</p></details>
+      <div class="spazio solo-stampa"></div>
+      <p class="nota no-print">La soluzione si sblocca nell'app Studio Amico dopo aver caricato un tuo tentativo.</p>
+    </article><article class="esercizio">
+      <div class="riga"><span class="badge d-avanzato">Sfida</span><span class="num">4</span></div>
+      <p>Un ascensore di massa totale 800 kg sale con un&#39;accelerazione verso l&#39;alto di 1,5 m/s². Quanto vale la tensione del cavo? (usa g = 9,8 m/s²)</p>
+      <details class="no-print"><summary>💡 Suggerimento</summary><p>Disegna le due forze sull&#39;ascensore: la risultante è la differenza tra tensione e peso.</p></details>
+      <div class="spazio solo-stampa"></div>
+      <p class="nota no-print">La soluzione si sblocca nell'app Studio Amico dopo aver caricato un tuo tentativo.</p>
+    </article><article class="esercizio">
+      <div class="riga"><span class="badge d-avanzato">Sfida</span><span class="num">5</span></div>
+      <p>Un cavallo tira un carro. Per il terzo principio il carro tira il cavallo con una forza uguale e opposta. Allora come fanno a mettersi in movimento? Spiega a parole.</p>
+      <details class="no-print"><summary>💡 Suggerimento</summary><p>Su quali corpi agiscono le due forze della coppia? Quali altre forze agiscono sul cavallo, ad esempio dal terreno?</p></details>
+      <div class="spazio solo-stampa"></div>
+      <p class="nota no-print">La soluzione si sblocca nell'app Studio Amico dopo aver caricato un tuo tentativo.</p>
+    </article></section>
+    <section class="sez " id="sez-domande"><h2><span aria-hidden="true">❓</span> Domande</h2><article class="domanda" data-domanda="0">
+    <p><span class="badge">Comprensione</span> Enuncia il primo principio della dinamica e fai un esempio della vita quotidiana.</p>
+    <textarea class="no-print" rows="3" placeholder="Scrivi qui la tua risposta, poi confronta" aria-label="Scrivi qui la tua risposta, poi confronta"></textarea>
+    <button class="btn btn-sec no-print" data-confronta="0" disabled>Confronta con la traccia</button>
+    <div class="traccia hidden"><strong>Traccia:</strong> Forza risultante nulla → quiete o moto rettilineo uniforme; esempio: passeggero spinto in avanti quando l&#39;auto frena; vale nei sistemi inerziali.</div>
+    <div class="spazio piccolo solo-stampa"></div>
+  </article><article class="domanda" data-domanda="1">
+    <p><span class="badge">Comprensione</span> Che differenza c&#39;è tra massa e peso?</p>
+    <textarea class="no-print" rows="3" placeholder="Scrivi qui la tua risposta, poi confronta" aria-label="Scrivi qui la tua risposta, poi confronta"></textarea>
+    <button class="btn btn-sec no-print" data-confronta="1" disabled>Confronta con la traccia</button>
+    <div class="traccia hidden"><strong>Traccia:</strong> Massa: misura dell&#39;inerzia, kg, uguale ovunque. Peso: forza di gravità, N, P = m·g, cambia con g (es. sulla Luna).</div>
+    <div class="spazio piccolo solo-stampa"></div>
+  </article><article class="domanda" data-domanda="2">
+    <p><span class="badge">Ragionamento</span> Perché le forze di azione e reazione non si annullano?</p>
+    <textarea class="no-print" rows="3" placeholder="Scrivi qui la tua risposta, poi confronta" aria-label="Scrivi qui la tua risposta, poi confronta"></textarea>
+    <button class="btn btn-sec no-print" data-confronta="2" disabled>Confronta con la traccia</button>
+    <div class="traccia hidden"><strong>Traccia:</strong> Si annullano solo forze applicate allo stesso corpo; azione e reazione agiscono su corpi diversi.</div>
+    <div class="spazio piccolo solo-stampa"></div>
+  </article><article class="domanda" data-domanda="3">
+    <p><span class="badge">Ragionamento</span> Se raddoppi la forza risultante e dimezzi la massa, cosa succede all&#39;accelerazione?</p>
+    <textarea class="no-print" rows="3" placeholder="Scrivi qui la tua risposta, poi confronta" aria-label="Scrivi qui la tua risposta, poi confronta"></textarea>
+    <button class="btn btn-sec no-print" data-confronta="3" disabled>Confronta con la traccia</button>
+    <div class="traccia hidden"><strong>Traccia:</strong> a = F/m: numeratore ×2, denominatore ÷2 → l&#39;accelerazione diventa 4 volte più grande.</div>
+    <div class="spazio piccolo solo-stampa"></div>
+  </article><article class="domanda" data-domanda="4">
+    <p><span class="badge">Collegamento</span> Come spiegheresti, con i principi della dinamica, perché un razzo può accelerare nello spazio dove non c&#39;è aria su cui spingere?</p>
+    <textarea class="no-print" rows="3" placeholder="Scrivi qui la tua risposta, poi confronta" aria-label="Scrivi qui la tua risposta, poi confronta"></textarea>
+    <button class="btn btn-sec no-print" data-confronta="4" disabled>Confronta con la traccia</button>
+    <div class="traccia hidden"><strong>Traccia:</strong> Terzo principio: il razzo spinge i gas di scarico indietro, i gas spingono il razzo in avanti; non serve l&#39;aria.</div>
+    <div class="spazio piccolo solo-stampa"></div>
+  </article><article class="domanda" data-domanda="5">
+    <p><span class="badge">Collegamento</span> Un&#39;auto viaggia in autostrada a velocità costante. La forza risultante su di lei è zero? Allora a cosa serve il motore?</p>
+    <textarea class="no-print" rows="3" placeholder="Scrivi qui la tua risposta, poi confronta" aria-label="Scrivi qui la tua risposta, poi confronta"></textarea>
+    <button class="btn btn-sec no-print" data-confronta="5" disabled>Confronta con la traccia</button>
+    <div class="traccia hidden"><strong>Traccia:</strong> Sì, risultante nulla (primo principio); il motore compensa attriti e resistenza dell&#39;aria, che altrimenti la rallenterebbero.</div>
+    <div class="spazio piccolo solo-stampa"></div>
+  </article></section>
+    <section class="sez pagina-nuova" id="sez-vf"><h2><span aria-hidden="true">✅</span> Test: 10 vero o falso</h2><ol class="vf-lista"><li class="vf" data-vf="0">
+    <p>Se la forza risultante su un corpo è nulla, il corpo può muoversi di moto rettilineo uniforme.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="1">
+    <p>Per mantenere un corpo in moto a velocità costante serve sempre una forza risultante diversa da zero.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="2">
+    <p>A parità di forza risultante, se la massa raddoppia l&#39;accelerazione si dimezza.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="3">
+    <p>Un newton equivale a un kg · m/s².</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="4">
+    <p>Azione e reazione si annullano perché sono uguali e opposte.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="5">
+    <p>Massa e peso sono la stessa grandezza misurata in unità diverse.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="6">
+    <p>L&#39;accelerazione di un corpo ha la stessa direzione e lo stesso verso della forza risultante.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="7">
+    <p>Un sasso che cade attira la Terra con una forza uguale a quella con cui la Terra attira il sasso.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="8">
+    <p>Su un corpo fermo non agisce nessuna forza.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li><li class="vf" data-vf="9">
+    <p>Il primo principio vale in qualsiasi sistema di riferimento, anche dentro un&#39;auto che frena.</p>
+    <div class="vf-btn no-print">
+      <button class="btn btn-vf" data-risposta="true">Vero</button>
+      <button class="btn btn-vf" data-risposta="false">Falso</button>
+    </div>
+    <span class="solo-stampa caselle">☐ V &nbsp; ☐ F</span>
+    <p class="vf-fb hidden"></p>
+  </li></ol>
+    <p class="vf-punteggio no-print" aria-live="polite"></p>
+    <button class="btn btn-sec no-print" data-vf-reset>Rifai il test</button>
+    <div class="solo-stampa chiave"><h3>Soluzioni del test</h3><ol class="semplice"><li>1. Vero — Esatto: è il primo principio. Forza risultante nulla significa velocità costante, che può anche essere diversa da zero.</li><li>2. Falso — Falso: a velocità costante la forza risultante è nulla. Una forza serve a cambiare la velocità, non a mantenerla.</li><li>3. Vero — Esatto: a = F/m, quindi massa doppia significa accelerazione dimezzata.</li><li>4. Vero — Esatto: deriva da F = m·a, 1 N = 1 kg · 1 m/s².</li><li>5. Falso — Falso: sono uguali e opposte ma agiscono su corpi diversi, quindi non si annullano.</li><li>6. Falso — Falso: la massa (kg) misura l&#39;inerzia, il peso (N) è una forza: P = m·g. Sulla Luna la massa è la stessa, il peso no.</li><li>7. Vero — Esatto: dal secondo principio, a = F/m con m positiva, quindi a e F sono concordi.</li><li>8. Vero — Esatto: terzo principio. La Terra però ha una massa enorme, quindi la sua accelerazione è trascurabile.</li><li>9. Falso — Falso: su un corpo fermo possono agire più forze che si bilanciano, come peso e reazione del tavolo su un libro.</li><li>10. Falso — Falso: vale solo nei sistemi inerziali. Un&#39;auto che frena è accelerata, quindi non è inerziale.</li></ol></div></section>
+    <section class="sez " id="sez-vita"><h2><span aria-hidden="true">🌱</span> Nella vita reale</h2><div class="griglia"><div class="card-mini"><strong>La cintura di sicurezza</strong><p>Quando l&#39;auto frena di colpo, il tuo corpo tende a continuare in avanti per inerzia: la cintura applica la forza che ti ferma.</p></div><div class="card-mini"><strong>Il carrello della spesa</strong><p>Pieno è più difficile da far partire e da fermare di quello vuoto: più massa, meno accelerazione a parità di spinta.</p></div><div class="card-mini"><strong>Skate e nuoto</strong><p>Spingi il terreno o l&#39;acqua all&#39;indietro e loro spingono te in avanti: azione e reazione.</p></div><div class="card-mini"><strong>In ascensore</strong><p>Quando parte verso l&#39;alto ti senti più pesante: il pavimento deve spingerti più del tuo peso per accelerarti.</p></div></div></section>
+    <section class="sez " id="sez-piano"><h2><span aria-hidden="true">📅</span> Piano di ripasso</h2><ul class="piano"><li><strong>Domani</strong> — Scrivi a memoria i tre principi con un esempio ciascuno, poi controlla sullo schema.</li><li><strong>Tra 3 giorni</strong> — Rifai il test vero/falso e un esercizio senza guardare il suggerimento.</li><li><strong>Tra una settimana</strong> — Spiega a voce in 2 minuti il paradosso del cavallo e del carro.</li></ul></section>
+    <section class="sez " id="sez-metodo"><h2><span aria-hidden="true">🧭</span> Consiglio di metodo</h2><p>Prima di usare qualsiasi formula disegna il diagramma di corpo libero: scegli UN corpo e disegna solo le forze che agiscono su di lui. Metà degli errori in dinamica nasce dal mescolare forze applicate a corpi diversi.</p></section>
+    <footer class="scheda-foot">Scheda generata con l'aiuto dell'intelligenza artificiale: può contenere errori, verifica sul libro.</footer>
+  </div></main>
+<script>(function attivaBase(root, vf, L, onTest) {
+  const risposte = {};
+  const aggiornaPunteggio = () => {
+    const n = Object.keys(risposte).length;
+    const ok = Object.values(risposte).filter(Boolean).length;
+    const el = root.querySelector(".vf-punteggio");
+    if (!el) return;
+    el.textContent = n ? L.punteggio.replace("{ok}", ok).replace("{n}", n).replace("{tot}", vf.length) : "";
+    if (n === vf.length) {
+      el.textContent += " " + (ok >= 8 ? L.esito_top : ok >= 5 ? L.esito_bene : L.esito_dai);
+      if (onTest) onTest(ok, vf.length);
+    }
+  };
+  root.addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-risposta]");
+    if (b) {
+      const li = b.closest("[data-vf]");
+      const i = Number(li.dataset.vf);
+      if (i in risposte) return;
+      const giusta = String(vf[i].vero) === b.dataset.risposta;
+      risposte[i] = giusta;
+      li.classList.add(giusta ? "giusto" : "sbagliato");
+      li.querySelectorAll("[data-risposta]").forEach((x) => (x.disabled = true));
+      const fb = li.querySelector(".vf-fb");
+      fb.textContent = (giusta ? "👍 " + L.giusto : "🔁 " + L.sbagliato) + " " + vf[i].spiegazione;
+      fb.classList.remove("hidden");
+      aggiornaPunteggio();
+      return;
+    }
+    if (ev.target.closest("[data-vf-reset]")) {
+      Object.keys(risposte).forEach((k) => delete risposte[k]);
+      root.querySelectorAll("[data-vf]").forEach((li) => {
+        li.classList.remove("giusto", "sbagliato");
+        li.querySelectorAll("[data-risposta]").forEach((x) => (x.disabled = false));
+        li.querySelector(".vf-fb").classList.add("hidden");
+      });
+      aggiornaPunteggio();
+      return;
+    }
+    const c = ev.target.closest("[data-confronta]");
+    if (c) c.closest("[data-domanda]").querySelector(".traccia").classList.remove("hidden");
+  });
+  // La traccia si sblocca solo dopo aver scritto una risposta (pratica del recupero).
+  root.addEventListener("input", (ev) => {
+    if (ev.target.matches("[data-domanda] textarea")) {
+      ev.target.closest("[data-domanda]").querySelector("[data-confronta]").disabled = ev.target.value.trim().length < 15;
+    }
+  });
+})(document.body, [{"vero":true,"spiegazione":"Esatto: è il primo principio. Forza risultante nulla significa velocità costante, che può anche essere diversa da zero."},{"vero":false,"spiegazione":"Falso: a velocità costante la forza risultante è nulla. Una forza serve a cambiare la velocità, non a mantenerla."},{"vero":true,"spiegazione":"Esatto: a = F/m, quindi massa doppia significa accelerazione dimezzata."},{"vero":true,"spiegazione":"Esatto: deriva da F = m·a, 1 N = 1 kg · 1 m/s²."},{"vero":false,"spiegazione":"Falso: sono uguali e opposte ma agiscono su corpi diversi, quindi non si annullano."},{"vero":false,"spiegazione":"Falso: la massa (kg) misura l'inerzia, il peso (N) è una forza: P = m·g. Sulla Luna la massa è la stessa, il peso no."},{"vero":true,"spiegazione":"Esatto: dal secondo principio, a = F/m con m positiva, quindi a e F sono concordi."},{"vero":true,"spiegazione":"Esatto: terzo principio. La Terra però ha una massa enorme, quindi la sua accelerazione è trascurabile."},{"vero":false,"spiegazione":"Falso: su un corpo fermo possono agire più forze che si bilanciano, come peso e reazione del tavolo su un libro."},{"vero":false,"spiegazione":"Falso: vale solo nei sistemi inerziali. Un'auto che frena è accelerata, quindi non è inerziale."}], {"punteggio":"{ok} giuste su {n} (di {tot})","esito_top":"🏆 Fortissimo!","esito_bene":"👍 Buona base, ripassa gli errori.","esito_dai":"🌱 Si impara anche dagli errori: rileggi le spiegazioni e riprova domani.","giusto":"Giusto!","sbagliato":"Non proprio."});</script>
+</body>
+</html>
