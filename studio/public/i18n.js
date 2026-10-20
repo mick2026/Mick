@@ -24,18 +24,19 @@ export const DIZ = {
     car1: "Sto leggendo le tue pagine… 👀", car2: "Metto in ordine le idee… 🧩", car3: "Preparo esercizi e domande… ✏️",
     car4: "Invento il test vero/falso… ✅", car5: "Cerco collegamenti con la vita reale… 🌱",
     benvenuto: "Ciao! Sono Studio Amico", benvenutoTesto: "Fotografa le pagine da studiare e ti preparo una scheda con riassunto, schema, esercizi, domande e un test.",
-    priv1: "Le tue schede restano solo su questo dispositivo.",
-    priv2: "Le foto vengono inviate all'intelligenza artificiale solo per creare la scheda e non vengono conservate dall'app.",
+    priv1: "Le schede sono salvate sul nostro server in Europa, visibili solo alla tua famiglia.",
+    priv2: "Le foto vengono inviate all'intelligenza artificiale (Anthropic Claude) solo per creare la scheda e non vengono conservate.",
     priv3: "Non fotografare volti, nomi o dati personali.",
-    priv4: "Puoi cancellare tutto quando vuoi dalle Impostazioni.",
+    priv4: "Puoi scaricare o cancellare tutti i dati quando vuoi dalle Impostazioni.",
     consensoGenitore: "Sono un genitore/tutore, oppure ho almeno 14 anni e un genitore è d'accordo che io usi l'app.",
     iniziamo: "Iniziamo!", leggiPrivacy: "Privacy e sicurezza", indietro: "Indietro",
     privacyTitolo: "Privacy e sicurezza",
-    privacyTesto: `<p><strong>Cosa resta sul dispositivo:</strong> schede, risultati dei test, umore di inizio e fine studio. Nessun account, nessun dato su server dell'app.</p>
-      <p><strong>Cosa viene inviato:</strong> le foto delle pagine (ridimensionate e senza metadati come la posizione GPS) e le schede scelte per il ripasso vengono inviate al servizio di intelligenza artificiale Anthropic (Claude) solo per generare il contenuto. L'umore e le date non vengono inviati.</p>
-      <p><strong>Foto dei tentativi:</strong> servono solo per controllare l'esercizio; l'app conserva solo il commento, non la foto.</p>
+    privacyTesto: `<p><strong>Chi apre l'account:</strong> un genitore o tutore maggiorenne, che dà il consenso per i figli. Per ogni figlio si usa solo un soprannome e la classe.</p>
+      <p><strong>Cosa salviamo:</strong> email del genitore, profili (soprannome, classe, lingua), schede, risultati dei test, umore di inizio e fine studio, numero di schede usate nel mese. Server e database sono in Europa.</p>
+      <p><strong>Cosa viene inviato all'IA:</strong> le foto delle pagine (ridimensionate e senza metadati come la posizione GPS) e, per il ripasso, i testi delle schede scelte vengono inviati ad Anthropic (Claude) solo per generare il contenuto. Le foto non vengono conservate. Umore, date e email non vengono inviati.</p>
+      <p><strong>Foto dei tentativi:</strong> servono solo per controllare l'esercizio; conserviamo solo il commento, non la foto.</p>
       <p><strong>Contenuti generati da IA:</strong> possono contenere errori. Controlla sempre con il libro e con l'insegnante.</p>
-      <p><strong>Cancellazione:</strong> Impostazioni → "Cancella tutti i dati".</p>`,
+      <p><strong>I tuoi diritti:</strong> da Impostazioni puoi scaricare tutti i dati o eliminare l'account con tutto il suo contenuto.</p>`,
     quantaVoglia: "Quanta voglia hai oggi?", energia_poca: "Pochina", energia_media: "Normale", energia_tanta: "Tantissima",
     notaUmore: "Nessuna risposta è sbagliata: serve a preparare una scheda su misura.",
     energiaRisposta_poca: "Ci sta! Facciamo una scheda leggera, un passo alla volta 🐢",
@@ -83,6 +84,23 @@ export const DIZ = {
     backup: "Scarica backup", ripristina: "Ripristina backup", cancellaTutto: "Cancella tutti i dati",
     ripristinate: "{n} schede ripristinate.", fileNonValido: "File non valido.",
     confermaCancellaTutto: "Cancellare TUTTE le schede e le impostazioni da questo dispositivo? Non si può annullare.",
+    sessioneScaduta: "Sessione scaduta: accedi di nuovo.",
+    emailGenitore: "Email del genitore", notaLogin: "Ti mandiamo un codice: niente password da ricordare.",
+    mandaCodice: "Mandami il codice", codiceInviato: "Ti abbiamo mandato un codice a {email}.", codiceDiProva: "Codice di prova",
+    codice: "Codice", entra: "Entra", cambiaEmail: "Usa un'altra email", esci: "Esci",
+    consensoTitolo: "Prima di iniziare", consensoTesto: "Studio Amico è pensato per ragazzi e ragazze: l'account lo apre un genitore.",
+    consensoGenitoreAdulto: "Sono maggiorenne e sono il genitore o tutore dei ragazzi che useranno l'app.",
+    consensoPrivacy: "Ho letto l'informativa e acconsento al trattamento dei dati descritto",
+    primoProfilo: "Chi studierà con Studio Amico?", chiStudia: "Chi studia oggi?", creaProfilo: "Crea profilo", aggiungiProfilo: "Aggiungi un profilo",
+    nomeProfilo: "Nome o soprannome", nomeProfiloEsempio: "Es. Tommi", notaNomeProfilo: "Basta un soprannome: niente cognome.",
+    ciao: "Ciao {nome}!", profili: "Profili", modifica: "Modifica", salva: "Salva", salvato: "Salvato.",
+    confermaEliminaProfilo: "Eliminare questo profilo e tutte le sue schede?",
+    limiteTitolo: "Schede del mese finite", limiteTesto: "Hai usato tutte le schede di questo mese. Puoi ancora ripassare quelle che hai già.",
+    vaiArchivio: "Vai all'archivio", pianoProva: "Prova gratuita", pianoAbbonato: "Abbonamento", schedeMese: "{n} di {max} schede questo mese",
+    account: "Account", datiServer: "Le schede sono salvate sul server, quindi le ritrovi su ogni dispositivo.",
+    esportaDati: "Scarica tutti i dati", eliminaAccount: "Elimina account",
+    eliminaAccountTesto: "Cancella definitivamente account, profili e schede. Non si può annullare.",
+    scriviElimina: "Scrivi ELIMINA per confermare", accountEliminato: "Account eliminato.",
   },
   en: {
     ...MATERIE_EN,
@@ -91,18 +109,19 @@ export const DIZ = {
     car1: "Reading your pages… 👀", car2: "Sorting out the ideas… 🧩", car3: "Preparing exercises and questions… ✏️",
     car4: "Writing the true/false quiz… ✅", car5: "Looking for real-life connections… 🌱",
     benvenuto: "Hi! I'm Study Buddy", benvenutoTesto: "Take photos of the pages you need to study and I'll make you a card with summary, outline, exercises, questions and a quiz.",
-    priv1: "Your cards stay on this device only.",
-    priv2: "Photos are sent to the AI only to create the card and are not kept by the app.",
+    priv1: "Cards are saved on our server in Europe, visible only to your family.",
+    priv2: "Photos are sent to the AI (Anthropic Claude) only to create the card and are not kept.",
     priv3: "Don't photograph faces, names or personal data.",
-    priv4: "You can delete everything at any time in Settings.",
+    priv4: "You can download or delete all your data at any time in Settings.",
     consensoGenitore: "I am a parent/guardian, or I am at least 14 and a parent agrees I can use the app.",
     iniziamo: "Let's start!", leggiPrivacy: "Privacy and safety", indietro: "Back",
     privacyTitolo: "Privacy and safety",
-    privacyTesto: `<p><strong>What stays on the device:</strong> cards, quiz results, start/end mood. No account, no data on the app's servers.</p>
-      <p><strong>What is sent:</strong> page photos (resized, with metadata such as GPS location removed) and the cards chosen for review are sent to the Anthropic (Claude) AI service only to generate content. Mood and dates are not sent.</p>
-      <p><strong>Attempt photos:</strong> used only to check the exercise; the app keeps the comment, not the photo.</p>
+    privacyTesto: `<p><strong>Who opens the account:</strong> an adult parent or guardian, who gives consent for their children. Each child has only a nickname and a school year.</p>
+      <p><strong>What we store:</strong> parent's email, profiles (nickname, year, language), cards, quiz results, start/end mood, number of cards used this month. Server and database are in Europe.</p>
+      <p><strong>What is sent to the AI:</strong> page photos (resized, metadata such as GPS location removed) and, for reviews, the text of the chosen cards are sent to Anthropic (Claude) only to generate content. Photos are not kept. Mood, dates and email are not sent.</p>
+      <p><strong>Attempt photos:</strong> used only to check the exercise; we keep the comment, not the photo.</p>
       <p><strong>AI-generated content:</strong> may contain mistakes. Always check with your book and teacher.</p>
-      <p><strong>Deletion:</strong> Settings → "Delete all data".</p>`,
+      <p><strong>Your rights:</strong> in Settings you can download all your data or delete the account and everything in it.</p>`,
     quantaVoglia: "How much do you feel like studying today?", energia_poca: "Not much", energia_media: "Okay", energia_tanta: "Loads",
     notaUmore: "There's no wrong answer: it helps me tailor the card.",
     energiaRisposta_poca: "That's fine! A light card, one step at a time 🐢",
@@ -150,6 +169,23 @@ export const DIZ = {
     backup: "Download backup", ripristina: "Restore backup", cancellaTutto: "Delete all data",
     ripristinate: "{n} cards restored.", fileNonValido: "Invalid file.",
     confermaCancellaTutto: "Delete ALL cards and settings from this device? This cannot be undone.",
+    sessioneScaduta: "Session expired: please sign in again.",
+    emailGenitore: "Parent's email", notaLogin: "We'll send you a code: no password to remember.",
+    mandaCodice: "Send me the code", codiceInviato: "We sent a code to {email}.", codiceDiProva: "Test code",
+    codice: "Code", entra: "Sign in", cambiaEmail: "Use another email", esci: "Sign out",
+    consensoTitolo: "Before we start", consensoTesto: "Study Buddy is designed for young people: a parent opens the account.",
+    consensoGenitoreAdulto: "I am an adult and the parent or guardian of the children who will use the app.",
+    consensoPrivacy: "I have read the privacy notice and agree to the data processing described",
+    primoProfilo: "Who will study with Study Buddy?", chiStudia: "Who's studying today?", creaProfilo: "Create profile", aggiungiProfilo: "Add a profile",
+    nomeProfilo: "Name or nickname", nomeProfiloEsempio: "E.g. Tom", notaNomeProfilo: "A nickname is enough: no surname.",
+    ciao: "Hi {nome}!", profili: "Profiles", modifica: "Edit", salva: "Save", salvato: "Saved.",
+    confermaEliminaProfilo: "Delete this profile and all its cards?",
+    limiteTitolo: "No cards left this month", limiteTesto: "You've used all of this month's cards. You can still review the ones you have.",
+    vaiArchivio: "Go to archive", pianoProva: "Free trial", pianoAbbonato: "Subscription", schedeMese: "{n} of {max} cards this month",
+    account: "Account", datiServer: "Cards are saved on the server, so you find them on every device.",
+    esportaDati: "Download all data", eliminaAccount: "Delete account",
+    eliminaAccountTesto: "Permanently deletes the account, profiles and cards. This cannot be undone.",
+    scriviElimina: "Type ELIMINA to confirm", accountEliminato: "Account deleted.",
   },
 };
 

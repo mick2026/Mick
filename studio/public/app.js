@@ -1,5 +1,5 @@
 import { t, lang, setLang, LINGUE_UI, applicaTraduzioni } from "./i18n.js";
-import * as db from "./db.js";
+import { pref, cancellaPref } from "./db.js";
 import { preparaImmagine } from "./img.js";
 import { esportaHTML, scarica } from "./export.js";
 import {
@@ -9,31 +9,66 @@ import {
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const app = $("#app");
-let config = { demo: false, richiedeCodice: false };
+let config = { demo: false, loginDiProva: false };
+let io = null; // { email, famiglia, profili, utilizzo }
 
-// ---------- utilità ----------
 const LIVELLI = ["primaria", "media1", "media2", "media3", "sup1", "sup2", "sup3", "sup4", "sup5"];
 const LINGUE_SCHEDE = ["it", "en", "es", "fr", "de"];
 
-function impostazioni() {
-  return {
-    livello: db.pref("livello") ?? "media2",
-    linguaSchede: db.pref("linguaSchede") ?? lang(),
-    codice: db.pref("codice") ?? "",
-  };
+// ---------- sessione e API ----------
+class ErroreApi extends Error {}
+
+async function rinnova(s) {
+  const r = await fetch("/api/auth/rinnova", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: s.refresh_token }),
+  });
+  if (!r.ok) throw new ErroreApi("sessione");
+  const nuova = await r.json();
+  pref("sessione", nuova);
+  return nuova;
 }
 
-async function api(percorso, body) {
+async function api(metodo, percorso, body, riprova = true) {
+  let s = pref("sessione");
+  if (s && s.expires_at * 1000 < Date.now() + 60_000) s = await rinnova(s).catch(() => null);
   const r = await fetch(percorso, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Access-Code": impostazioni().codice },
-    body: JSON.stringify(body),
+    method: metodo,
+    headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(s ? { Authorization: "Bearer " + s.access_token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
   });
+  if (r.status === 401 && s && riprova) {
+    const nuova = await rinnova(s).catch(() => null);
+    if (nuova) return api(metodo, percorso, body, false);
+  }
   const dati = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(dati.errore || t("erroreGenerico"));
+  if (r.status === 401 && s) {
+    esci(false);
+    throw Object.assign(new ErroreApi(t("sessioneScaduta")), { codice: "sessione" });
+  }
+  if (!r.ok) throw Object.assign(new ErroreApi(dati.errore || t("erroreGenerico")), { codice: dati.codice, status: r.status });
   return dati;
 }
 
+async function aggiornaIo() {
+  io = await api("GET", "/api/io");
+  return io;
+}
+
+function esci(chiama = true) {
+  const s = pref("sessione");
+  if (chiama && s) fetch("/api/auth/esci", { method: "POST", headers: { Authorization: "Bearer " + s.access_token, "Content-Type": "application/json" }, body: "{}" }).catch(() => {});
+  pref("sessione", null);
+  pref("profilo", null);
+  io = null;
+  if (location.hash !== "#/") location.hash = "#/";
+  else router();
+}
+
+const profiloCorrente = () => io?.profili.find((p) => p.id === pref("profilo")) ?? null;
+
+// ---------- utilità ----------
 function toast(msg) {
   const el = $("#toast");
   el.textContent = msg;
@@ -41,9 +76,6 @@ function toast(msg) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => el.classList.remove("visibile"), 3500);
 }
-
-// crypto.randomUUID esiste solo in HTTPS: su rete locale in http si usa getRandomValues.
-const nuovoId = () => [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 function caricamento(chiavi) {
   let i = 0;
@@ -59,41 +91,158 @@ function caricamento(chiavi) {
 
 const MSG_CARICAMENTO = ["car1", "car2", "car3", "car4", "car5"];
 
-// ---------- consenso iniziale ----------
-function vistaBenvenuto() {
+function testoUtilizzo() {
+  const u = io.utilizzo;
+  const piano = io.famiglia.piano === "abbonato" ? t("pianoAbbonato") : t("pianoProva");
+  return `${piano} · ${t("schedeMese").replace("{n}", u.schede).replace("{max}", u.limiteSchede)}`;
+}
+
+function aggiornaTestata() {
+  const p = profiloCorrente();
+  const chip = $("#chip-profilo");
+  chip.hidden = !p;
+  if (p) chip.textContent = `👤 ${p.nome}`;
+}
+
+// ---------- accesso ----------
+const login = { email: "", inviato: false, codiceDiProva: "" };
+
+function vistaLogin() {
   app.innerHTML = `<section class="pannello">
     <h1>👋 ${t("benvenuto")}</h1>
     <p>${t("benvenutoTesto")}</p>
+    ${login.inviato
+      ? `<form id="form-codice" novalidate>
+          <p>${t("codiceInviato").replace("{email}", `<strong>${esc(login.email)}</strong>`)}</p>
+          ${login.codiceDiProva ? `<p class="nota">${t("codiceDiProva")}: <strong>${esc(login.codiceDiProva)}</strong></p>` : ""}
+          <label class="campo" for="codice">${t("codice")}<input id="codice" inputmode="numeric" autocomplete="one-time-code" maxlength="10" value="${esc(login.codiceDiProva)}" required></label>
+          <button class="btn btn-pri grande" type="submit">${t("entra")}</button>
+          <p><button class="link" type="button" id="cambia-email">${t("cambiaEmail")}</button></p>
+        </form>`
+      : `<form id="form-email" novalidate>
+          <label class="campo" for="email">${t("emailGenitore")}<input id="email" type="email" autocomplete="email" value="${esc(login.email)}" required></label>
+          <p class="nota">${t("notaLogin")}</p>
+          <button class="btn btn-pri grande" type="submit">${t("mandaCodice")}</button>
+        </form>`}
+    <p class="nota"><a href="#/privacy">${t("leggiPrivacy")}</a></p>
+  </section>`;
+
+  $("#form-email")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    login.email = $("#email").value.trim();
+    try {
+      const r = await api("POST", "/api/auth/codice", { email: login.email });
+      Object.assign(login, { inviato: true, codiceDiProva: r.codiceDiProva ?? "" });
+      vistaLogin();
+      $("#codice").focus();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+  $("#form-codice")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const s = await api("POST", "/api/auth/verifica", { email: login.email, codice: $("#codice").value });
+      pref("sessione", s);
+      Object.assign(login, { inviato: false, codiceDiProva: "" });
+      router();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+  $("#cambia-email")?.addEventListener("click", () => ((login.inviato = false), vistaLogin()));
+}
+
+function vistaConsenso() {
+  app.innerHTML = `<section class="pannello">
+    <h1>👨‍👩‍👧 ${t("consensoTitolo")}</h1>
+    <p>${t("consensoTesto")}</p>
     <ul class="privacy-lista">
       <li>🔒 ${t("priv1")}</li><li>🤖 ${t("priv2")}</li><li>🙈 ${t("priv3")}</li><li>🗑️ ${t("priv4")}</li>
     </ul>
-    <label class="check"><input type="checkbox" id="consenso"> ${t("consensoGenitore")}</label>
-    <button class="btn btn-pri" id="inizia" disabled>${t("iniziamo")}</button>
-    <p class="nota"><a href="#/privacy">${t("leggiPrivacy")}</a></p>
+    <label class="check"><input type="checkbox" id="c-genitore"> <span>${t("consensoGenitoreAdulto")}</span></label>
+    <label class="check"><input type="checkbox" id="c-privacy"> <span>${t("consensoPrivacy")} (<a href="#/privacy">${t("leggiPrivacy")}</a>)</span></label>
+    <button class="btn btn-pri" id="conferma-consenso" disabled>${t("iniziamo")}</button>
+    <p><button class="link" id="esci">${t("esci")}</button></p>
   </section>`;
-  $("#consenso").onchange = (e) => ($("#inizia").disabled = !e.target.checked);
-  $("#inizia").onclick = () => {
-    db.pref("consenso", new Date().toISOString());
-    location.hash = "#/nuova";
+  const aggiorna = () => ($("#conferma-consenso").disabled = !($("#c-genitore").checked && $("#c-privacy").checked));
+  $("#c-genitore").onchange = $("#c-privacy").onchange = aggiorna;
+  $("#esci").onclick = () => esci();
+  $("#conferma-consenso").onclick = async () => {
+    try {
+      Object.assign(io, await api("POST", "/api/consenso", { genitore: true }));
+      router();
+    } catch (err) {
+      toast(err.message);
+    }
   };
 }
 
-function vistaPrivacy() {
-  app.innerHTML = `<section class="pannello testo">
-    <h1>🔒 ${t("privacyTitolo")}</h1>
-    ${t("privacyTesto")}
-    <p><a href="#/">${t("indietro")}</a></p>
-  </section>`;
+// ---------- profili ----------
+function campiProfilo(p = {}) {
+  return `<label class="campo" for="p-nome">${t("nomeProfilo")}<input id="p-nome" maxlength="40" autocomplete="off" value="${esc(p.nome ?? "")}" placeholder="${t("nomeProfiloEsempio")}"></label>
+    <p class="nota">${t("notaNomeProfilo")}</p>
+    <label class="campo" for="p-livello">${t("classe")}
+      <select id="p-livello">${LIVELLI.map((k) => `<option value="${k}" ${k === (p.livello ?? "media2") ? "selected" : ""}>${t("livello_" + k)}</option>`).join("")}</select></label>
+    <label class="campo" for="p-lingua">${t("linguaSchede")}
+      <select id="p-lingua">${LINGUE_SCHEDE.map((k) => `<option value="${k}" ${k === (p.lingua ?? lang()) ? "selected" : ""}>${t("lingua_" + k)}</option>`).join("")}</select></label>`;
+}
+const leggiCampiProfilo = () => ({ nome: $("#p-nome").value, livello: $("#p-livello").value, lingua: $("#p-lingua").value });
+
+function vistaProfili() {
+  const nuovo = !io.profili.length;
+  app.innerHTML = nuovo
+    ? `<section class="pannello">
+        <h1>${t("primoProfilo")}</h1>
+        ${campiProfilo()}
+        <button class="btn btn-pri grande" id="crea-profilo">${t("creaProfilo")}</button>
+      </section>`
+    : `<section class="pannello centro">
+        <h1>${t("chiStudia")}</h1>
+        <div class="profili">${io.profili.map((p) => `<button class="btn-profilo" data-profilo="${p.id}"><span aria-hidden="true">🧑‍🎓</span>${esc(p.nome)}<small>${t("livello_" + p.livello)}</small></button>`).join("")}</div>
+        <details class="aggiungi"><summary>＋ ${t("aggiungiProfilo")}</summary>
+          <div class="sinistra">${campiProfilo()}<button class="btn btn-pri" id="crea-profilo">${t("creaProfilo")}</button></div>
+        </details>
+      </section>`;
+  app.onclick = async (ev) => {
+    const b = ev.target.closest("[data-profilo]");
+    if (b) {
+      pref("profilo", b.dataset.profilo);
+      aggiornaTestata();
+      return (location.hash = "#/nuova");
+    }
+    if (ev.target.closest("#crea-profilo")) {
+      try {
+        const p = await api("POST", "/api/profili", leggiCampiProfilo());
+        io.profili.push(p);
+        pref("profilo", p.id);
+        aggiornaTestata();
+        if (location.hash === "#/nuova") router();
+        else location.hash = "#/nuova";
+      } catch (err) {
+        toast(err.message);
+      }
+    }
+  };
 }
 
 // ---------- nuova scheda ----------
 const bozza = { energia: null, materia: null, immagini: [], note: "" };
 
 function vistaNuova() {
+  if (io.utilizzo.schede >= io.utilizzo.limiteSchede) {
+    app.innerHTML = `<section class="pannello centro">
+      <h1>🌙 ${t("limiteTitolo")}</h1>
+      <p>${t("limiteTesto")}</p>
+      <p class="nota">${testoUtilizzo()}</p>
+      <a class="btn btn-sec" href="#/archivio">${t("vaiArchivio")}</a>
+    </section>`;
+    return;
+  }
   const passo = !bozza.energia ? 1 : !bozza.materia ? 2 : 3;
   if (passo === 1) {
     app.innerHTML = `<section class="pannello centro">
-      <h1>${t("quantaVoglia")}</h1>
+      <h1>${t("ciao").replace("{nome}", esc(profiloCorrente().nome))} ${t("quantaVoglia")}</h1>
       <div class="umore">${UMORE_INIZIO.map(([k, e]) => `<button class="btn-umore" data-energia="${k}"><span>${e}</span>${t("energia_" + k)}</button>`).join("")}</div>
       <p class="nota">${t("notaUmore")}</p>
     </section>`;
@@ -129,8 +278,9 @@ function vistaNuova() {
     </div>
     <div class="anteprime">${bozza.immagini.map((img, i) => `<figure><img src="${img.anteprima}" alt="${t("pagina")} ${i + 1}"><button class="x" data-rimuovi="${i}" aria-label="${t("rimuovi")}">×</button></figure>`).join("")}</div>
     <p class="nota">${t("contaFoto").replace("{n}", bozza.immagini.length).replace("{max}", 8)} · ${t("avvisoFoto")}</p>
-    <label class="campo">${t("noteFacoltative")}<textarea id="note" rows="2" maxlength="500" placeholder="${t("notePlaceholder")}">${esc(bozza.note)}</textarea></label>
+    <label class="campo" for="note">${t("noteFacoltative")}<textarea id="note" rows="2" maxlength="500" placeholder="${t("notePlaceholder")}">${esc(bozza.note)}</textarea></label>
     <button class="btn btn-pri grande" id="genera" ${bozza.immagini.length ? "" : "disabled"}>✨ ${t("creaScheda")}</button>
+    <p class="nota centro">${testoUtilizzo()}</p>
   </section>`;
 
   const aggiungi = async (files) => {
@@ -159,34 +309,21 @@ function vistaNuova() {
 }
 
 async function generaScheda() {
-  const imp = impostazioni();
   const stop = caricamento(MSG_CARICAMENTO);
   try {
-    const out = await api("/api/scheda", {
+    const scheda = await api("POST", "/api/scheda", {
+      profilo: pref("profilo"),
       materia: bozza.materia,
-      livello: imp.livello,
-      lingua: imp.linguaSchede,
       energia: bozza.energia,
       note: bozza.note,
       immagini: bozza.immagini.map(({ mediaType, data }) => ({ mediaType, data })),
     });
-    const ora = new Date().toISOString();
-    const scheda = {
-      ...out,
-      id: nuovoId(),
-      tipo: "scheda",
-      materia: bozza.materia,
-      lingua: imp.linguaSchede,
-      creata: ora,
-      sessioni: [{ data: ora, inizio: bozza.energia, fine: null }],
-      esiti: {},
-      test: [],
-    };
-    await db.salva(scheda);
     Object.assign(bozza, { energia: null, materia: null, immagini: [], note: "" });
+    await aggiornaIo().catch(() => {});
     location.hash = `#/scheda/${scheda.id}`;
   } catch (e) {
     toast(e.message);
+    if (e.codice === "limite") await aggiornaIo().catch(() => {});
     vistaNuova();
   } finally {
     stop();
@@ -195,10 +332,15 @@ async function generaScheda() {
 
 // ---------- scheda ----------
 async function vistaScheda(id) {
-  const s = await db.leggi(id);
-  if (!s) return (location.hash = "#/archivio");
+  let s;
+  try {
+    s = await api("GET", `/api/schede/${encodeURIComponent(id)}`);
+  } catch {
+    return (location.hash = "#/archivio");
+  }
   const sessione = s.sessioni.at(-1);
   const sessioneAperta = sessione && !sessione.fine && Date.now() - new Date(sessione.data) < 6 * 3600_000;
+  const salvaParziale = (campi) => api("PATCH", `/api/schede/${s.id}`, campi).catch((e) => toast(e.message));
 
   app.innerHTML = `
     <div class="barra-azioni no-print">
@@ -219,9 +361,9 @@ async function vistaScheda(id) {
       <div class="umore">${UMORE_FINE.map(([k, e]) => `<button class="btn-umore ${sessione?.fine === k && sessioneAperta ? "scelto" : ""}" data-fine="${k}"><span>${e}</span>${t("fine_" + k)}</button>`).join("")}</div>
     </section>`;
 
-  attivaBase(app, s.vero_falso ?? [], etichetteBase(), async (ok, tot) => {
+  attivaBase(app, s.vero_falso ?? [], etichetteBase(), (ok, tot) => {
     s.test.push({ data: new Date().toISOString(), ok, tot });
-    await db.salva(s);
+    salvaParziale({ test: s.test });
   });
 
   app.onclick = async (ev) => {
@@ -234,7 +376,7 @@ async function vistaScheda(id) {
     const ini = ev.target.closest("[data-inizio]");
     if (ini) {
       s.sessioni.push({ data: new Date().toISOString(), inizio: ini.dataset.inizio, fine: null });
-      await db.salva(s);
+      salvaParziale({ sessioni: s.sessioni });
       $("#banner-inizio").remove();
       return toast(t("energiaRisposta_" + ini.dataset.inizio));
     }
@@ -245,14 +387,14 @@ async function vistaScheda(id) {
         s.sessioni.push({ data: new Date().toISOString(), inizio: null, fine: null });
       }
       s.sessioni.at(-1).fine = fine.dataset.fine;
-      await db.salva(s);
+      salvaParziale({ sessioni: s.sessioni });
       app.querySelectorAll("[data-fine]").forEach((b) => b.classList.toggle("scelto", b === fine));
       return toast(t("fineRisposta_" + fine.dataset.fine));
     }
     if (ev.target.closest("#stampa")) return window.print();
     if (ev.target.closest("#esporta")) return esportaHTML(s).catch(() => toast(t("erroreGenerico")));
     if (ev.target.closest("#elimina") && confirm(t("confermaElimina"))) {
-      await db.elimina(s.id);
+      await api("DELETE", `/api/schede/${s.id}`, {}).catch((e) => toast(e.message));
       location.hash = "#/archivio";
     }
   };
@@ -269,20 +411,10 @@ async function vistaScheda(id) {
         const { mediaType, data } = await preparaImmagine(f);
         immagini.push({ mediaType, data });
       }
-      const imp = impostazioni();
-      const esito = await api("/api/verifica-tentativo", {
-        materia: s.materia,
-        livello: imp.livello,
-        lingua: s.lingua,
-        esercizio: { consegna: s.esercizi[i].consegna },
-        contestoScheda: `${s.titolo}. ${s.abstract}`,
-        immagini,
-      });
-      // Si salva solo l'esito testuale, non la foto del tentativo.
-      s.esiti[i] = { ...esito, data: new Date().toISOString() };
-      await db.salva(s);
-      toast(esito.tentativo_serio ? t("tentativoOk") : t("tentativoNo"));
-      vistaScheda(id).then(() => document.getElementById("sez-esercizi")?.scrollIntoView());
+      const agg = await api("POST", "/api/verifica-tentativo", { scheda: s.id, esercizio: i, immagini });
+      toast(agg.esiti[i]?.tentativo_serio ? t("tentativoOk") : t("tentativoNo"));
+      await vistaScheda(id);
+      document.getElementById("sez-esercizi")?.scrollIntoView();
     } catch (e) {
       toast(e.message);
       box.querySelector(".attesa")?.remove();
@@ -292,46 +424,38 @@ async function vistaScheda(id) {
 
 // ---------- archivio ----------
 async function vistaArchivio() {
-  const schede = await db.tutte();
-  const filtro = db.pref("filtroMateria") ?? "";
+  const schede = await api("GET", `/api/schede?profilo=${pref("profilo")}`);
+  const filtro = pref("filtroMateria") ?? "";
   const visibili = filtro ? schede.filter((s) => s.materia === filtro) : schede;
-  const gruppi = Map.groupBy ? Map.groupBy(visibili, (s) => s.materia) : raggruppa(visibili);
+  const gruppi = new Map();
+  for (const s of visibili) gruppi.set(s.materia, [...(gruppi.get(s.materia) ?? []), s]);
   const presenti = [...new Set(schede.map((s) => s.materia))];
 
   app.innerHTML = `<section class="pannello">
-    <h1>🗂️ ${t("archivio")}</h1>
+    <h1>🗂️ ${t("archivio")} · ${esc(profiloCorrente().nome)}</h1>
     ${schede.length ? `<label class="campo">${t("filtraMateria")}
       <select id="filtro"><option value="">${t("tutte")}</option>${presenti.map((m) => `<option value="${m}" ${m === filtro ? "selected" : ""}>${t("materia_" + m)}</option>`).join("")}</select></label>` : `<p>${t("archivioVuoto")}</p><a class="btn btn-pri" href="#/nuova">✨ ${t("creaPrima")}</a>`}
     ${[...gruppi].map(([m, lista]) => `<h2>${emojiMateria(m)} ${t("materia_" + m)} <small>(${lista.length})</small></h2>
       <ul class="elenco">${lista.map(voceArchivio).join("")}</ul>`).join("")}
   </section>`;
   const sel = $("#filtro");
-  if (sel) sel.onchange = (e) => (db.pref("filtroMateria", e.target.value), vistaArchivio());
-  app.onclick = null;
-}
-
-function raggruppa(lista) {
-  const m = new Map();
-  for (const s of lista) m.set(s.materia, [...(m.get(s.materia) ?? []), s]);
-  return m;
+  if (sel) sel.onchange = (e) => (pref("filtroMateria", e.target.value), vistaArchivio());
 }
 
 function voceArchivio(s) {
-  const ultima = s.sessioni?.at(-1);
-  const umore = [UMORE_INIZIO.find(([k]) => k === ultima?.inizio)?.[1], UMORE_FINE.find(([k]) => k === ultima?.fine)?.[1]]
-    .filter(Boolean).join(" → ");
-  const test = s.test?.at(-1);
-  return `<li><a href="#/scheda/${s.id}">
+  const r = s.riepilogo ?? {};
+  const umore = [UMORE_INIZIO.find(([k]) => k === r.inizio)?.[1], UMORE_FINE.find(([k]) => k === r.fine)?.[1]].filter(Boolean).join(" → ");
+  return `<li><a href="#/scheda/${esc(s.id)}">
     <span class="titolo">${s.tipo === "ripasso" ? "🔁 " : ""}${esc(s.titolo)}</span>
-    <span class="meta">${esc(dataBreve(s.creata))}${umore ? " · " + umore : ""}${test ? ` · ✅ ${test.ok}/${test.tot}` : ""}</span>
+    <span class="meta">${esc(dataBreve(s.creata))}${umore ? " · " + umore : ""}${r.test ? ` · ✅ ${r.test.ok}/${r.test.tot}` : ""}</span>
   </a></li>`;
 }
 
 // ---------- ripasso ----------
 async function vistaRipasso() {
-  const schede = (await db.tutte()).filter((s) => s.tipo === "scheda");
+  const schede = (await api("GET", `/api/schede?profilo=${pref("profilo")}`)).filter((s) => s.tipo === "scheda");
   const presenti = [...new Set(schede.map((s) => s.materia))];
-  const materia = presenti.includes(db.pref("materiaRipasso")) ? db.pref("materiaRipasso") : presenti[0];
+  const materia = presenti.includes(pref("materiaRipasso")) ? pref("materiaRipasso") : presenti[0];
   if (!materia) {
     app.innerHTML = `<section class="pannello"><h1>🔁 ${t("ripasso")}</h1><p>${t("ripassoVuoto")}</p></section>`;
     return;
@@ -343,27 +467,24 @@ async function vistaRipasso() {
     <label class="campo">${t("materia")}
       <select id="mat-rip">${presenti.map((m) => `<option value="${m}" ${m === materia ? "selected" : ""}>${t("materia_" + m)}</option>`).join("")}</select></label>
     <fieldset><legend>${t("qualiSchede")}</legend>
-      <ul class="elenco check">${dellaMateria.map((s) => `<li><label><input type="checkbox" value="${s.id}" checked> ${esc(s.titolo)} <span class="meta">${esc(dataBreve(s.creata))}</span></label></li>`).join("")}</ul>
+      <ul class="elenco check">${dellaMateria.map((s) => `<li><label><input type="checkbox" value="${esc(s.id)}" checked> ${esc(s.titolo)} <span class="meta">${esc(dataBreve(s.creata))}</span></label></li>`).join("")}</ul>
     </fieldset>
     <fieldset><legend>${t("perCosa")}</legend>
       <div class="modi">${["riassunto", "orale", "scritto"].map((m, i) => `<label class="chip"><input type="radio" name="modo" value="${m}" ${i === 0 ? "checked" : ""}> ${t("modo_" + m)}</label>`).join("")}</div>
     </fieldset>
     <button class="btn btn-pri grande" id="crea-ripasso">✨ ${t("creaRipasso")}</button>
+    <p class="nota centro">${testoUtilizzo()}</p>
   </section>`;
-  $("#mat-rip").onchange = (e) => (db.pref("materiaRipasso", e.target.value), vistaRipasso());
+  $("#mat-rip").onchange = (e) => (pref("materiaRipasso", e.target.value), vistaRipasso());
   app.onclick = async (ev) => {
     if (!ev.target.closest("#crea-ripasso")) return;
-    const ids = [...app.querySelectorAll(".elenco input:checked")].map((i) => i.value);
+    const ids = [...app.querySelectorAll(".elenco input:checked")].map((i) => i.value).slice(0, 12);
     if (!ids.length) return toast(t("selezionaAlmenoUna"));
     const modalita = app.querySelector("input[name=modo]:checked").value;
-    const scelte = dellaMateria.filter((s) => ids.includes(s.id));
-    const imp = impostazioni();
     const stop = caricamento(MSG_CARICAMENTO);
     try {
-      const out = await api("/api/ripasso", { materia, livello: imp.livello, lingua: imp.linguaSchede, modalita, schede: scelte });
-      const ora = new Date().toISOString();
-      const r = { ...out, id: nuovoId(), tipo: "ripasso", modalita, fonti: ids, materia, lingua: imp.linguaSchede, creata: ora, sessioni: [], esiti: {}, test: [] };
-      await db.salva(r);
+      const r = await api("POST", "/api/ripasso", { profilo: pref("profilo"), schede: ids, modalita });
+      await aggiornaIo().catch(() => {});
       location.hash = `#/scheda/${r.id}`;
     } catch (e) {
       toast(e.message);
@@ -376,57 +497,92 @@ async function vistaRipasso() {
 
 // ---------- impostazioni ----------
 function vistaImpostazioni() {
-  const imp = impostazioni();
   app.innerHTML = `<section class="pannello">
     <h1>⚙️ ${t("impostazioni")}</h1>
     <label class="campo">${t("linguaApp")}
       <select id="lingua-app">${Object.entries(LINGUE_UI).map(([k, n]) => `<option value="${k}" ${k === lang() ? "selected" : ""}>${n}</option>`).join("")}</select></label>
-    <label class="campo">${t("linguaSchede")}
-      <select id="lingua-schede">${LINGUE_SCHEDE.map((k) => `<option value="${k}" ${k === imp.linguaSchede ? "selected" : ""}>${t("lingua_" + k)}</option>`).join("")}</select></label>
-    <label class="campo">${t("classe")}
-      <select id="livello">${LIVELLI.map((k) => `<option value="${k}" ${k === imp.livello ? "selected" : ""}>${t("livello_" + k)}</option>`).join("")}</select></label>
-    ${config.richiedeCodice ? `<label class="campo">${t("codiceAccesso")}<input id="codice" type="password" autocomplete="off" value="${esc(imp.codice)}"></label>` : ""}
-    <h2>💾 ${t("datiTitolo")}</h2>
-    <p class="nota">${t("datiTesto")}</p>
+
+    <h2>🧑‍🎓 ${t("profili")}</h2>
+    <ul class="elenco">${io.profili.map((p) => `<li class="riga-profilo">
+      <span><strong>${esc(p.nome)}</strong> <span class="meta">${t("livello_" + p.livello)} · ${t("lingua_" + p.lingua)}</span></span>
+      <span><button class="btn btn-ghost" data-modifica="${p.id}">${t("modifica")}</button><button class="btn btn-ghost pericolo" data-elimina-profilo="${p.id}" aria-label="${t("elimina")} ${esc(p.nome)}">🗑️</button></span>
+    </li>`).join("")}</ul>
+    <div id="form-profilo"></div>
+    <a class="btn btn-sec" href="#/profili">＋ ${t("aggiungiProfilo")}</a>
+
+    <h2>👤 ${t("account")}</h2>
+    <p>${esc(io.email)}</p>
+    <p class="nota">${testoUtilizzo()}</p>
+    <p class="nota">${t("datiServer")}</p>
     <div class="foto-azioni">
-      <button class="btn btn-sec" id="backup">⬇️ ${t("backup")}</button>
-      <label class="btn btn-sec">⬆️ ${t("ripristina")}<input type="file" accept="application/json" hidden id="ripristina"></label>
-      <button class="btn btn-ghost pericolo" id="cancella">🗑️ ${t("cancellaTutto")}</button>
+      <button class="btn btn-sec" id="esporta-dati">⬇️ ${t("esportaDati")}</button>
+      <button class="btn btn-sec" id="esci">↩️ ${t("esci")}</button>
     </div>
+    <details class="pericolo-zona"><summary>${t("eliminaAccount")}</summary>
+      <p class="nota">${t("eliminaAccountTesto")}</p>
+      <label class="campo" for="conferma-elimina">${t("scriviElimina")}<input id="conferma-elimina" autocomplete="off"></label>
+      <button class="btn btn-ghost pericolo" id="elimina-account">🗑️ ${t("eliminaAccount")}</button>
+    </details>
     <p><a href="#/privacy">${t("leggiPrivacy")}</a></p>
   </section>`;
   $("#lingua-app").onchange = (e) => (setLang(e.target.value), applicaTraduzioni(), vistaImpostazioni());
-  $("#lingua-schede").onchange = (e) => db.pref("linguaSchede", e.target.value);
-  $("#livello").onchange = (e) => db.pref("livello", e.target.value);
-  if ($("#codice")) $("#codice").onchange = (e) => db.pref("codice", e.target.value);
-  $("#backup").onclick = async () => {
-    const dati = { app: "studio-amico", versione: 1, esportato: new Date().toISOString(), schede: await db.tutte() };
-    scarica(new Blob([JSON.stringify(dati)], { type: "application/json" }), `studio-amico-backup-${dati.esportato.slice(0, 10)}.json`);
-  };
-  $("#ripristina").onchange = async (e) => {
+  $("#esci").onclick = () => esci();
+  $("#esporta-dati").onclick = async () => {
     try {
-      const dati = JSON.parse(await e.target.files[0].text());
-      if (dati.app !== "studio-amico" || !Array.isArray(dati.schede)) throw new Error();
-      let n = 0;
-      for (const s of dati.schede) {
-        if (typeof s?.id === "string" && typeof s.creata === "string" && typeof s.titolo === "string") {
-          await db.salva(s);
-          n++;
-        }
-      }
-      toast(t("ripristinate").replace("{n}", n));
-    } catch {
-      toast(t("fileNonValido"));
+      const dati = await api("GET", "/api/esporta");
+      scarica(new Blob([JSON.stringify(dati, null, 2)], { type: "application/json" }), `studio-amico-dati-${dati.esportato.slice(0, 10)}.json`);
+    } catch (e) {
+      toast(e.message);
     }
   };
-  $("#cancella").onclick = async () => {
-    if (!confirm(t("confermaCancellaTutto"))) return;
-    await db.svuota();
-    db.cancellaPref();
-    location.hash = "#/";
-    location.reload();
+  $("#elimina-account").onclick = async () => {
+    try {
+      await api("DELETE", "/api/account", { conferma: $("#conferma-elimina").value.trim() });
+      cancellaPref();
+      toast(t("accountEliminato"));
+      esci(false);
+    } catch (e) {
+      toast(e.message);
+    }
   };
-  app.onclick = null;
+  app.onclick = async (ev) => {
+    const mod = ev.target.closest("[data-modifica]");
+    if (mod) {
+      const p = io.profili.find((x) => x.id === mod.dataset.modifica);
+      $("#form-profilo").innerHTML = `<div class="riquadro">${campiProfilo(p)}<button class="btn btn-pri" id="salva-profilo">${t("salva")}</button></div>`;
+      $("#salva-profilo").onclick = async () => {
+        try {
+          Object.assign(p, await api("PATCH", `/api/profili/${p.id}`, leggiCampiProfilo()));
+          aggiornaTestata();
+          vistaImpostazioni();
+          toast(t("salvato"));
+        } catch (e) {
+          toast(e.message);
+        }
+      };
+      return;
+    }
+    const del = ev.target.closest("[data-elimina-profilo]");
+    if (del && confirm(t("confermaEliminaProfilo"))) {
+      try {
+        await api("DELETE", `/api/profili/${del.dataset.eliminaProfilo}`, {});
+        io.profili = io.profili.filter((x) => x.id !== del.dataset.eliminaProfilo);
+        if (!profiloCorrente()) pref("profilo", null);
+        aggiornaTestata();
+        vistaImpostazioni();
+      } catch (e) {
+        toast(e.message);
+      }
+    }
+  };
+}
+
+function vistaPrivacy() {
+  app.innerHTML = `<section class="pannello testo">
+    <h1>🔒 ${t("privacyTitolo")}</h1>
+    ${t("privacyTesto")}
+    <p><a href="#/">${t("indietro")}</a></p>
+  </section>`;
 }
 
 // ---------- router ----------
@@ -435,14 +591,35 @@ async function router() {
   window.scrollTo(0, 0);
   const [, vista, id] = location.hash.split("/");
   document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("attivo", a.dataset.nav === (vista || "nuova")));
+  const menu = $(".tabbar");
   if (vista === "privacy") return vistaPrivacy();
-  if (!db.pref("consenso")) return vistaBenvenuto();
-  switch (vista) {
-    case "scheda": return vistaScheda(decodeURIComponent(id ?? ""));
-    case "archivio": return vistaArchivio();
-    case "ripasso": return vistaRipasso();
-    case "impostazioni": return vistaImpostazioni();
-    default: return vistaNuova();
+
+  menu.hidden = true;
+  aggiornaTestata();
+  if (!pref("sessione")) return vistaLogin();
+  try {
+    if (!io) await aggiornaIo();
+  } catch (e) {
+    if (e.codice !== "sessione") toast(e.message);
+    return;
+  }
+  if (!io.famiglia.consenso_at) return vistaConsenso();
+  if (vista === "profili" || !profiloCorrente()) {
+    if (vista !== "profili" && io.profili.length === 1) pref("profilo", io.profili[0].id);
+    else return vistaProfili();
+  }
+  aggiornaTestata();
+  menu.hidden = false;
+  try {
+    switch (vista) {
+      case "scheda": return await vistaScheda(decodeURIComponent(id ?? ""));
+      case "archivio": return await vistaArchivio();
+      case "ripasso": return await vistaRipasso();
+      case "impostazioni": return vistaImpostazioni();
+      default: return vistaNuova();
+    }
+  } catch (e) {
+    toast(e.message);
   }
 }
 

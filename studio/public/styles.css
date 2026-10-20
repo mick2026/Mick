@@ -158,6 +158,23 @@ details summary { cursor: pointer; color: var(--pri); font-weight: 600; margin: 
 .elenco .titolo { font-weight: 600; }
 .elenco .meta { margin: 0; }
 
+.chip-profilo { margin-left: auto; padding: 6px 12px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line);
+  color: var(--ink); text-decoration: none; font-size: .9rem; font-weight: 600; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-profilo[hidden], .tabbar[hidden] { display: none; }
+.profili { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 16px 0; }
+.btn-profilo { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 8px; border-radius: var(--radius);
+  border: 2px solid var(--line); background: var(--card); cursor: pointer; font-weight: 700; font-size: 1.05rem; }
+.btn-profilo span { font-size: 2.2rem; }
+.btn-profilo small { color: var(--ink-soft); font-weight: 400; font-size: .8rem; }
+.btn-profilo:hover { border-color: var(--pri); }
+.aggiungi summary { margin: 8px 0; }
+.sinistra { text-align: left; }
+.centro { text-align: center; }
+.riga-profilo { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; }
+.riquadro { background: var(--soft); border-radius: 12px; padding: 4px 14px 14px; margin: 10px 0; }
+.pericolo-zona { margin: 20px 0 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.pericolo-zona summary { color: var(--no); }
+
 /* ---------- Stampa A4 ---------- */
 @page { size: A4; margin: 15mm 14mm; }
 @media print {

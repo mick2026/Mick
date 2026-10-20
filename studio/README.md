@@ -11,16 +11,18 @@ App di supporto allo studio. Scegli la materia, fotografi pagine e appunti e ott
 
 Inoltre:
 - 🐢🙂🚀 all'inizio "Quanta voglia hai?" e 😮‍💨🙂🤩 alla fine "Com'è andata?" (la scheda si adatta all'energia)
-- 🗂️ archivio per materia e data, salvato **solo sul dispositivo**
+- 👨‍👩‍👧 **login del genitore** con codice via email, **profili per i figli**, consenso registrato, limite mensile di schede
+- 🗂️ archivio per materia e data, salvato sul server (ritrovi le schede su ogni dispositivo)
 - 🔁 **Ripasso**: unisce più schede in un ripasso veloce, una simulazione di **interrogazione orale** o di **verifica scritta**
 - 🖨️ stampa **A4 / PDF** (spazi per scrivere, chiave del test su pagina separata)
 - 📤 export in **HTML** autonomo, da inviare e usare offline (sul telefono apre il menu di condivisione)
 - 🌍 multilingue: interfaccia IT/EN, schede in IT/EN/ES/FR/DE
-- 💾 backup e ripristino, cancellazione totale
+- 💾 scarica tutti i dati, elimina account
 
 Documenti importanti:
 - [`docs/PEDAGOGIA.md`](docs/PEDAGOGIA.md) — ricerche che guidano le attività, per materia
 - [`docs/PRIVACY-SICUREZZA.md`](docs/PRIVACY-SICUREZZA.md) — privacy, sicurezza, GDPR, AI Act, legge italiana sull'IA
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — **come metterla online** (Anthropic, Supabase, Render/Fly, dominio)
 
 ## Versione su claude.ai (dal telefono, senza installare nulla)
 
@@ -34,30 +36,28 @@ node artifact/build.mjs     # crea artifact/studio-amico.html (file unico da pub
 
 ## Avvio (versione server)
 
-Serve Node.js 20+ e una chiave API Anthropic.
+Serve Node.js 20.12+.
 
 ```bash
 cd studio
 npm install
-ANTHROPIC_API_KEY=sk-ant-... npm start      # http://127.0.0.1:8787
-npm run demo                                # prova l'interfaccia senza chiave (contenuti finti)
+npm run demo     # prova completa senza nessun account: login finto (codice a schermo), dati in memoria, schede finte
+npm start        # con ANTHROPIC_API_KEY nel file .env: schede vere, login finto e dati in memoria
 npm test
 ```
 
-In alternativa (anche su Windows) copia `.env.example` in `.env`, inserisci chiave e impostazioni, poi `npm start`.
-
-Usarla dal telefono sulla rete di casa: nel file `.env` metti `HOST=0.0.0.0` e un `APP_ACCESS_CODE`.
-All'avvio il server stampa l'indirizzo da aprire sul telefono; inserisci il codice in Impostazioni.
-"Aggiungi a schermata Home" la fa sembrare un'app. Per uso fuori casa serve un hosting con **HTTPS**.
+Per la versione vera con login e database, e per pubblicarla online: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+Le impostazioni stanno nel file `.env` (vedi `.env.example`).
 
 | Variabile | Default | Significato |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | Chiave API (solo sul server) |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` | — | Login e database; senza, modalità di prova |
+| `LIMITE_PROVA` / `LIMITE_ABBONATO` | 5 / 40 | Schede al mese per famiglia |
 | `PORT` / `HOST` | `8787` / `127.0.0.1` | Indirizzo del server |
-| `APP_ACCESS_CODE` | vuoto | Se impostato, le richieste all'IA richiedono questo codice |
-| `CLAUDE_MODEL` | `claude-opus-5-5` | Modello |
-| `CLAUDE_EFFORT` | `medium` | Profondità di ragionamento (`low`…`max`) |
-| `DEMO` | — | `1` = risposte finte, nessuna chiamata all'IA |
+| `CLAUDE_MODEL` / `CLAUDE_EFFORT` | `claude-opus-5-5` / `medium` | Modello e profondità di ragionamento |
+| `DEMO` | — | `1` = schede finte, nessuna chiamata all'IA (vietato in produzione) |
+| `STORE_FILE` | — | Con il login di prova, salva i dati in un file JSON |
 
 **Costi indicativi** (Claude Opus 5.5, $4/$20 per milione di token in ingresso/uscita): una scheda da 4 pagine
 costa nell'ordine di 0,10–0,30 $. Da misurare sull'uso reale.
@@ -66,7 +66,10 @@ costa nell'ordine di 0,10–0,30 $. Da misurare sull'uso reale.
 
 ```
 server/
-  index.js       server HTTP: file statici, API, intestazioni di sicurezza, limiti
+  index.js       server HTTP: rotte API, intestazioni di sicurezza, limiti
+  config.js      configurazione e controlli per la produzione
+  auth.js        login con codice email (Supabase) o di prova
+  store/         archivio: supabase.js (produzione) e memoria.js (prove e test)
   claude.js      chiamate a Claude (output JSON strutturato, fallback in caso di rifiuto)
   pedagogia.js   principi didattici e linee guida per materia inseriti nei prompt
   schemas.js     schema JSON della scheda e della verifica del tentativo
@@ -75,9 +78,11 @@ server/
   demo.js        risposte finte per DEMO=1
 public/
   index.html, styles.css (incl. stampa A4), app.js (viste), render.js (scheda),
-  i18n.js (traduzioni), db.js (IndexedDB), img.js (ridimensiona e rimuove EXIF), export.js
+  i18n.js (traduzioni), db.js (preferenze), img.js (ridimensiona e rimuove EXIF), export.js
 artifact/        versione claude.ai: app.js, extra.css, shell.html, build.mjs
-docs/            pedagogia, privacy e sicurezza
+docs/            pedagogia, privacy e sicurezza, pubblicazione online
+supabase/        schema del database (da eseguire una volta in Supabase)
+Dockerfile, fly.toml, ../render.yaml   pubblicazione su Render o Fly.io
 test/            test del server e della validazione
 ```
 

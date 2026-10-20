@@ -1,3 +1,4 @@
 node_modules/
 .env
 artifact/studio-amico.html
+dati.json

@@ -5,26 +5,38 @@
 
 ## 1. Come l'app tratta i dati (privacy by design, art. 25 GDPR)
 
-| Dato | Dove sta | Inviato all'IA? | Conservato da noi? |
+Versione con login (server + Supabase in UE):
+
+| Dato | Dove sta | Inviato all'IA? | Conservato? |
 |---|---|---|---|
-| Foto di pagine e appunti | Solo in memoria durante la creazione | Sì, per generare la scheda | **No** (né sul dispositivo né sul server) |
-| Foto dei tentativi di esercizio | Solo in memoria | Sì, per verificare il tentativo | **No**: resta solo il commento testuale |
-| Schede, risultati test, esiti esercizi | IndexedDB del browser, sul dispositivo | Solo le schede scelte per il ripasso (solo testi di contenuto) | Solo sul dispositivo |
-| Umore inizio/fine | Sul dispositivo | **No** (solo il livello di energia, senza data, per adattare la scheda) | Solo sul dispositivo |
-| Account, nome, email, scuola | **Non raccolti** | — | — |
+| Email del genitore | Supabase Auth (Francoforte) | No | Sì, fino all'eliminazione dell'account |
+| Profili figli (soprannome, classe, lingua) | Database Supabase (UE) | Solo classe e lingua, per adattare la scheda | Sì |
+| Consenso del genitore (versione e data) | Database | No | Sì (prova del consenso) |
+| Foto di pagine e appunti | Solo in memoria durante la richiesta | Sì, per generare la scheda | **No** |
+| Foto dei tentativi di esercizio | Solo in memoria | Sì, per verificare il tentativo | **No**: resta solo il commento |
+| Schede, risultati test, esiti esercizi | Database | Solo i testi delle schede scelte per il ripasso | Sì |
+| Umore inizio/fine | Database | **No** (solo il livello di energia, per adattare la scheda) | Sì |
+| Schede usate nel mese | Database | No | Sì (limiti del piano) |
+
+Diritti dell'interessato già nell'app: **Scarica tutti i dati** (portabilità, art. 20) ed
+**Elimina account** (cancellazione, art. 17), con cancellazione a cascata di profili e schede.
+
+La versione su claude.ai e quella locale senza login tengono invece i dati sul dispositivo o nello
+spazio privato dell'account claude.ai.
 
 Misure tecniche:
 - **Minimizzazione**: le foto vengono ridimensionate e **ricodificate** nel browser, eliminando i metadati EXIF (es. posizione GPS).
-- Il server **non scrive su disco e non registra** i contenuti; nei log vanno solo i tipi di errore.
+- Il server **non registra** i contenuti nei log (solo i tipi di errore) e **non salva le foto**.
 - La chiave API sta **solo sul server** (variabile d'ambiente), mai nel browser.
 - Le istruzioni all'IA vietano di riportare nomi, volti o dati personali presenti nelle foto, e trattano il testo nelle immagini come contenuto, non come comandi (difesa da *prompt injection*).
 - Tutto ciò che viene dall'IA è **escapato** prima di essere mostrato (protezione XSS) + Content-Security-Policy restrittiva.
-- Limite di richieste per IP, dimensione massima delle richieste, validazione di tutti gli input, codice di accesso opzionale (`APP_ACCESS_CODE`).
-- Cancellazione totale con un pulsante (Impostazioni → Cancella tutti i dati); backup/ripristino in JSON gestito dall'utente.
+- Login senza password (codice via email), accesso al database solo dal server, ogni query filtrata per famiglia (test automatico di isolamento).
+- Limite di richieste per IP e per utente, limite mensile di schede, dimensione massima delle richieste, validazione di tutti gli input.
+- In produzione il server non parte con il login di prova o senza chiavi.
 - Il file HTML esportato **non contiene** le soluzioni degli esercizi.
 
 Rischi residui da conoscere:
-- Chi ha accesso al dispositivo vede le schede: usare il blocco schermo.
+- Chi ha accesso al telefono con la sessione aperta vede le schede della famiglia: usare il blocco schermo.
 - Le immagini sono elaborate da Anthropic (fornitore USA) — vedi §3.
 - L'IA può sbagliare: avviso fisso su ogni scheda e in stampa.
 
@@ -61,7 +73,7 @@ Rischi residui da conoscere:
 - [ ] Parere legale/DPO e **DPIA**
 - [ ] Informativa privacy completa + moduli di consenso genitori
 - [ ] DPA con Anthropic, verifica trasferimenti extra-UE
-- [ ] Server in hosting UE con HTTPS, `APP_ACCESS_CODE` o login, monitoraggio costi
+- [ ] Server in hosting UE con HTTPS e login (vedi `DEPLOY.md`), tetto di spesa e monitoraggio costi
 - [ ] Revisione pedagogica (vedi `PEDAGOGIA.md`) e test su schede reali
 - [ ] Audit di accessibilità
 - [ ] Procedura per segnalare contenuti errati o inadeguati
