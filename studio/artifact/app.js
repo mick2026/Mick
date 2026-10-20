@@ -86,7 +86,16 @@ const archivio = {
   },
   async salva(s) {
     await capPronte;
-    return cap.store ? cap.store.doc(s.id).set(clona(s)) : salva(s);
+    if (cap.store) {
+      try {
+        return await cap.store.doc(s.id).set(clona(s));
+      } catch (e) {
+        // Chi ha il link in sola lettura non può scrivere su claude.ai: si passa al browser.
+        if (e?.code !== "invalid_argument") throw e;
+        cap.store = null;
+      }
+    }
+    return salva(s);
   },
   async elimina(id) {
     await capPronte;
