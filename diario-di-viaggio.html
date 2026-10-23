@@ -261,7 +261,7 @@
       </div>
 
       <div class="chip-row">
-        <input type="file" id="f-photo-input" accept="image/*" capture="environment" multiple class="hidden">
+        <input type="file" id="f-photo-input" accept="image/*" multiple class="hidden">
         <button class="chip" id="f-photo-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
           <span id="f-photo-label">Aggiungi foto</span>
@@ -278,6 +278,7 @@
         </button>
       </div>
 
+      <p id="f-photo-error" class="msg-error hidden"></p>
       <p id="f-mic-error" class="msg-error hidden"></p>
       <p id="f-loc-error" class="msg-error hidden"></p>
       <p id="f-size-error" class="msg-error hidden"></p>
@@ -455,21 +456,39 @@
   // ---------- helpers ----------
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-  function resizeImage(dataUrl, maxWidth, quality){
-    maxWidth = maxWidth || 1400; quality = quality || 0.78;
-    return new Promise(function(resolve){
+  // Decodifica il file tramite object URL (senza caricare in memoria l'originale
+  // come base64) e lo ridimensiona limitando il lato più lungo.
+  // Rifiuta se il browser non sa decodificare il formato (es. HEIC su Chrome/Android).
+  function resizeImage(file, maxSide, quality){
+    maxSide = maxSide || 1400; quality = quality || 0.78;
+    return new Promise(function(resolve, reject){
+      var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function(){
-        var scale = Math.min(1, maxWidth / img.width);
-        var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
-        var canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        var ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        try {
+          var iw = img.naturalWidth, ih = img.naturalHeight;
+          if (!iw || !ih) throw new Error("empty image");
+          var scale = Math.min(1, maxSide / Math.max(iw, ih));
+          var w = Math.round(iw * scale), h = Math.round(ih * scale);
+          var canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          var out = canvas.toDataURL("image/jpeg", quality);
+          canvas.width = canvas.height = 0;
+          if (out.indexOf("data:image/jpeg") !== 0) throw new Error("encode failed");
+          resolve(out);
+        } catch (err) {
+          reject(err);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
       };
-      img.onerror = function(){ resolve(dataUrl); };
-      img.src = dataUrl;
+      img.onerror = function(){
+        URL.revokeObjectURL(url);
+        reject(new Error("decode failed"));
+      };
+      img.src = url;
     });
   }
   function blobToBase64(blob){
@@ -1075,13 +1094,14 @@
   var fMicError = document.getElementById("f-mic-error");
   var fLocError = document.getElementById("f-loc-error");
   var fSizeError = document.getElementById("f-size-error");
+  var fPhotoError = document.getElementById("f-photo-error");
   var fSave = document.getElementById("f-save");
   var fHint = document.getElementById("f-hint");
 
   var formState = { photos:[], audio:null, audioDuration:0, location:null };
   var recording = false, recSeconds = 0, recTimer = null;
   var mediaRecorder = null, recChunks = [], recStream = null;
-  var saving = false, locBusy = false;
+  var saving = false, locBusy = false, photoBusy = false;
 
   function resetForm(){
     fTitle.value = "";
@@ -1091,6 +1111,9 @@
     fPhotoGrid.innerHTML = "";
     fPhotoInput.value = "";
     fPhotoLabel.textContent = "Aggiungi foto";
+    fPhotoBtn.disabled = false;
+    fPhotoError.classList.add("hidden");
+    photoBusy = false;
     fAudioBtn.className = "chip";
     fAudioLabel.textContent = "Registra audio";
     fAudioBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg><span id="f-audio-label">Registra audio</span>';
@@ -1105,9 +1128,9 @@
 
   function updateSaveState(){
     var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photos.length > 0 || formState.audio;
-    fSave.disabled = !canSave || saving;
+    fSave.disabled = !canSave || saving || photoBusy;
     fHint.style.display = canSave ? "none" : "block";
-    fSave.textContent = "Salva nel diario";
+    fSave.textContent = photoBusy ? "Elaborazione foto..." : "Salva nel diario";
   }
   fTitle.addEventListener("input", updateSaveState);
   fNote.addEventListener("input", updateSaveState);
@@ -1122,21 +1145,39 @@
   fPhotoBtn.addEventListener("click", function(){ fPhotoInput.click(); });
   fPhotoInput.addEventListener("change", function(){
     var files = fPhotoInput.files ? Array.prototype.slice.call(fPhotoInput.files) : [];
-    if (files.length === 0) return;
+    fPhotoInput.value = "";
+    if (files.length === 0 || photoBusy) return;
 
-    fPhotoLabel.textContent = "Elaborazione...";
-    Promise.all(files.map(function(file){
-      return new Promise(function(resolve){
-        var reader = new FileReader();
-        reader.onload = function(){
-          resizeImage(reader.result).then(function(resized){ resolve(resized); });
-        };
-        reader.readAsDataURL(file);
+    var formRef = formState;
+    var failed = 0;
+    photoBusy = true;
+    fPhotoBtn.disabled = true;
+    fPhotoError.classList.add("hidden");
+    updateSaveState();
+
+    // Una foto alla volta: elaborarle tutte in parallelo esaurisce la memoria sui telefoni.
+    var chain = Promise.resolve();
+    files.forEach(function(file, i){
+      chain = chain.then(function(){
+        if (formRef !== formState) return;
+        fPhotoLabel.textContent = "Elaborazione " + (i + 1) + "/" + files.length + "...";
+        return resizeImage(file).then(function(resized){
+          if (formRef !== formState) return;
+          formState.photos.push(resized);
+          renderFormGallery();
+        }, function(){ failed++; });
       });
-    })).then(function(resizedList){
-      formState.photos = formState.photos.concat(resizedList);
-      fPhotoInput.value = "";
+    });
+    chain.then(function(){
+      if (formRef !== formState) return;
+      photoBusy = false;
+      fPhotoBtn.disabled = false;
       fPhotoLabel.textContent = "Aggiungi foto";
+      if (failed) {
+        fPhotoError.textContent = (failed === 1 ? "Una foto non è stata caricata" : failed + " foto non sono state caricate") +
+          ": formato non supportato da questo browser (es. HEIC). Prova a scattarla in JPEG o a esportarla come JPEG.";
+        fPhotoError.classList.remove("hidden");
+      }
       renderFormGallery();
       updateSaveState();
     });
@@ -1253,7 +1294,7 @@
 
   fSave.addEventListener("click", function(){
     var canSave = fTitle.value.trim() || fNote.value.trim() || formState.photos.length > 0 || formState.audio;
-    if (!canSave || saving) return;
+    if (!canSave || saving || photoBusy) return;
     fSizeError.classList.add("hidden");
 
     var exp = {
