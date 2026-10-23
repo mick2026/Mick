@@ -53,6 +53,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .pannello { background: var(--card); border-radius: var(--radius); padding: 20px; margin: 8px 0 16px; border: 1px solid var(--line); }
 .pannello.centro { text-align: center; }
 .testo p { margin: 0 0 10px; }
+.avvertenza { background: var(--soft); border-left: 4px solid var(--acc); border-radius: 8px; padding: 10px 12px; }
+.guida details { border-top: 1px solid var(--line); padding: 4px 0; }
+.guida details summary { font-size: 1.05rem; }
+.guida ul, .guida ol { padding-left: 22px; }
+.guida li { margin: 4px 0; }
+.aiuto { margin-left: auto; text-decoration: none; font-size: 1.2rem; }
+.aiuto + .chip-profilo { margin-left: 0; }
 .meta { color: var(--ink-soft); font-size: .9rem; margin: 0 0 6px; }
 .nota { color: var(--ink-soft); font-size: .85rem; }
 

@@ -1,5 +1,9 @@
 # 🦉 Studio Amico
 
+> **Strumento di supporto allo studio:** non sostituisce la scuola, gli insegnanti né i percorsi di
+> apprendimento riconosciuti e consolidati. La guida completa per famiglie e ragazzi è nell'app
+> (pulsante ❓, pagina `#/guida`, testo in `public/guida.js`).
+
 App di supporto allo studio. Scegli la materia, fotografi pagine e appunti e ottieni una **scheda interattiva** con:
 
 - **In breve** (abstract) e **schema** degli argomenti

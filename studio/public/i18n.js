@@ -31,6 +31,9 @@ export const DIZ = {
     consensoGenitore: "Sono un genitore/tutore, oppure ho almeno 14 anni e un genitore è d'accordo che io usi l'app.",
     iniziamo: "Iniziamo!", leggiPrivacy: "Privacy e sicurezza", indietro: "Indietro",
     privacyTitolo: "Privacy e sicurezza",
+    guidaTitolo: "Guida a Studio Amico", apriGuida: "Guida all'uso",
+    avvertenzaStrumento: "Studio Amico è uno strumento di supporto allo studio: non sostituisce la scuola, gli insegnanti né i percorsi di apprendimento riconosciuti e consolidati.",
+    consensoStrumento: "Ho capito che Studio Amico è uno strumento di supporto, che i contenuti generati dall'IA possono contenere errori e che non sostituisce la scuola né i percorsi di apprendimento riconosciuti.",
     privacyTesto: `<p><strong>Chi apre l'account:</strong> un genitore o tutore maggiorenne, che dà il consenso per i figli. Per ogni figlio si usa solo un soprannome e la classe.</p>
       <p><strong>Cosa salviamo:</strong> email del genitore, profili (soprannome, classe, lingua), schede, risultati dei test, umore di inizio e fine studio, numero di schede usate nel mese. Server e database sono in Europa.</p>
       <p><strong>Cosa viene inviato all'IA:</strong> le foto delle pagine (ridimensionate e senza metadati come la posizione GPS) e, per il ripasso, i testi delle schede scelte vengono inviati ad Anthropic (Claude) solo per generare il contenuto. Le foto non vengono conservate. Umore, date e email non vengono inviati.</p>
@@ -58,7 +61,7 @@ export const DIZ = {
     tentativoOk: "Tentativo ricevuto: ecco la soluzione guidata!", tentativoNo: "Prova ancora: serve un tentativo vero per sbloccare la soluzione.",
     abstract: "In breve", schema: "Schema degli argomenti", concetti: "Concetti chiave", esercizi: "Esercizi", domande: "Domande",
     testVF: "Test: 10 vero o falso", vitaReale: "Nella vita reale", pianoRipasso: "Piano di ripasso", consiglioMetodo: "Consiglio di metodo",
-    footerAI: "Scheda generata con l'aiuto dell'intelligenza artificiale: può contenere errori, verifica sul libro.",
+    footerAI: "Scheda generata con l'aiuto dell'intelligenza artificiale: può contenere errori, verifica sul libro. Strumento di supporto: non sostituisce la scuola né gli insegnanti.",
     soluzioneGuidata: "Soluzione guidata", caricaTentativo: "Carica il tuo tentativo",
     notaTentativo: "La soluzione si sblocca dopo che carichi la foto di un tuo tentativo serio, anche se sbagliato.",
     notaTentativoExport: "La soluzione si sblocca nell'app Studio Amico dopo aver caricato un tuo tentativo.",
@@ -138,6 +141,9 @@ export const DIZ = {
     consensoGenitore: "I am a parent/guardian, or I am at least 14 and a parent agrees I can use the app.",
     iniziamo: "Let's start!", leggiPrivacy: "Privacy and safety", indietro: "Back",
     privacyTitolo: "Privacy and safety",
+    guidaTitolo: "Studio Amico guide", apriGuida: "How to use it",
+    avvertenzaStrumento: "Studio Amico is a study support tool: it does not replace school, teachers or recognised, established learning pathways.",
+    consensoStrumento: "I understand that Studio Amico is a support tool, that AI-generated content may contain mistakes and that it does not replace school or recognised learning pathways.",
     privacyTesto: `<p><strong>Who opens the account:</strong> an adult parent or guardian, who gives consent for their children. Each child has only a nickname and a school year.</p>
       <p><strong>What we store:</strong> parent's email, profiles (nickname, year, language), cards, quiz results, start/end mood, number of cards used this month. Server and database are in Europe.</p>
       <p><strong>What is sent to the AI:</strong> page photos (resized, metadata such as GPS location removed) and, for reviews, the text of the chosen cards are sent to Anthropic (Claude) only to generate content. Photos are not kept. Mood, dates and email are not sent.</p>
@@ -165,7 +171,7 @@ export const DIZ = {
     tentativoOk: "Attempt received: here's the guided solution!", tentativoNo: "Try again: a real attempt unlocks the solution.",
     abstract: "In short", schema: "Topic outline", concetti: "Key concepts", esercizi: "Exercises", domande: "Questions",
     testVF: "Quiz: 10 true or false", vitaReale: "In real life", pianoRipasso: "Review plan", consiglioMetodo: "Study tip",
-    footerAI: "Card generated with the help of AI: it may contain mistakes, check with your book.",
+    footerAI: "Card generated with the help of AI: it may contain mistakes, check with your book. A support tool: it does not replace school or teachers.",
     soluzioneGuidata: "Guided solution", caricaTentativo: "Upload your attempt",
     notaTentativo: "The solution unlocks after you upload a photo of a real attempt, even a wrong one.",
     notaTentativoExport: "The solution unlocks in the Study Buddy app after uploading your attempt.",
@@ -246,4 +252,5 @@ export const t = (k) => DIZ[corrente][k] ?? DIZ.it[k] ?? k;
 export function applicaTraduzioni() {
   document.documentElement.lang = corrente;
   document.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => (el.title = el.ariaLabel = t(el.dataset.i18nAria)));
 }

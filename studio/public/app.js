@@ -3,6 +3,7 @@ import { pref, cancellaPref } from "./db.js";
 import { preparaImmagine } from "./img.js";
 import { esportaHTML, scarica } from "./export.js";
 import { SCUOLE, materieProposte, slug } from "./scuole.js";
+import { GUIDA } from "./guida.js";
 import {
   ELENCO_MATERIE, UMORE_INIZIO, UMORE_FINE, emojiMateria, esc, dataBreve,
   renderScheda, attivaBase, etichetteBase,
@@ -125,7 +126,7 @@ function vistaLogin() {
           <p class="nota">${t("notaLogin")}</p>
           <button class="btn btn-pri grande" type="submit">${t("mandaCodice")}</button>
         </form>`}
-    <p class="nota"><a href="#/privacy">${t("leggiPrivacy")}</a></p>
+    <p class="nota"><a href="#/guida">📘 ${t("apriGuida")}</a> · <a href="#/privacy">${t("leggiPrivacy")}</a></p>
   </section>`;
 
   $("#form-email")?.addEventListener("submit", async (e) => {
@@ -161,13 +162,16 @@ function vistaConsenso() {
     <ul class="privacy-lista">
       <li>🔒 ${t("priv1")}</li><li>🤖 ${t("priv2")}</li><li>🙈 ${t("priv3")}</li><li>🗑️ ${t("priv4")}</li>
     </ul>
+    <p class="avvertenza">${t("avvertenzaStrumento")} <a href="#/guida">${t("apriGuida")}</a></p>
     <label class="check"><input type="checkbox" id="c-genitore"> <span>${t("consensoGenitoreAdulto")}</span></label>
     <label class="check"><input type="checkbox" id="c-privacy"> <span>${t("consensoPrivacy")} (<a href="#/privacy">${t("leggiPrivacy")}</a>)</span></label>
+    <label class="check"><input type="checkbox" id="c-strumento"> <span>${t("consensoStrumento")}</span></label>
     <button class="btn btn-pri" id="conferma-consenso" disabled>${t("iniziamo")}</button>
     <p><button class="link" id="esci">${t("esci")}</button></p>
   </section>`;
-  const aggiorna = () => ($("#conferma-consenso").disabled = !($("#c-genitore").checked && $("#c-privacy").checked));
-  $("#c-genitore").onchange = $("#c-privacy").onchange = aggiorna;
+  const aggiorna = () =>
+    ($("#conferma-consenso").disabled = !["#c-genitore", "#c-privacy", "#c-strumento"].every((s) => $(s).checked));
+  $("#c-genitore").onchange = $("#c-privacy").onchange = $("#c-strumento").onchange = aggiorna;
   $("#esci").onclick = () => esci();
   $("#conferma-consenso").onclick = async () => {
     try {
@@ -591,7 +595,7 @@ function vistaImpostazioni() {
       <label class="campo" for="conferma-elimina">${t("scriviElimina")}<input id="conferma-elimina" autocomplete="off"></label>
       <button class="btn btn-ghost pericolo" id="elimina-account">🗑️ ${t("eliminaAccount")}</button>
     </details>
-    <p><a href="#/privacy">${t("leggiPrivacy")}</a></p>
+    <p><a href="#/guida">📘 ${t("apriGuida")}</a> · <a href="#/privacy">${t("leggiPrivacy")}</a></p>
   </section>`;
   $("#lingua-app").onchange = (e) => (setLang(e.target.value), applicaTraduzioni(), vistaImpostazioni());
   $("#esci").onclick = () => esci();
@@ -819,6 +823,15 @@ function vistaPrivacy() {
   </section>`;
 }
 
+function vistaGuida() {
+  app.innerHTML = `<section class="pannello testo guida">
+    <h1>📘 ${t("guidaTitolo")}</h1>
+    ${GUIDA[lang()] ?? GUIDA.it}
+    <p><button class="link" id="indietro">← ${t("indietro")}</button></p>
+  </section>`;
+  $("#indietro").onclick = () => (history.length > 1 ? history.back() : (location.hash = "#/"));
+}
+
 // Accesso dal link nell'email: Supabase torna all'app con la sessione nell'indirizzo (#access_token=...).
 function sessioneDaLink() {
   const h = location.hash.slice(1);
@@ -846,6 +859,7 @@ async function router() {
   document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("attivo", a.dataset.nav === (vista || "nuova")));
   const menu = $(".tabbar");
   if (vista === "privacy") return vistaPrivacy();
+  if (vista === "guida") return vistaGuida();
 
   menu.hidden = true;
   aggiornaTestata();
