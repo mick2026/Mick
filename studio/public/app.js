@@ -592,6 +592,7 @@ function vistaAttesa() {
   $("#ricontrolla").onclick = async () => {
     io = null;
     await router();
+    if (io && io.famiglia.stato !== "approvata") toast(t("ancoraInAttesa"));
   };
   $("#esci").onclick = () => esci();
 }
