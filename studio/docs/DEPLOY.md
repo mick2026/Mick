@@ -32,15 +32,27 @@ Telefono ──► Server Studio Amico (Render/Fly, Francoforte) ──► API A
    - Password del database: generala e conservala.
 2. Apri **SQL Editor**, incolla tutto il file `supabase/migrations/001_iniziale.sql` e premi **Run**.
    Crea le tabelle (famiglie, profili, schede, utilizzo) chiuse a chiunque tranne il server.
+   Poi, in una nuova query, esegui anche `supabase/migrations/002_email_famiglie.sql`
+   (aggiunge l'email del genitore, usata dall'area amministrazione).
 3. **Authentication → Sign In / Providers → Email**: lascia attivo Email.
 4. **Email di accesso**: con il servizio email incluso in Supabase arriva un **link** "Log In".
    L'app lo accetta così com'è: basta toccarlo. Il servizio incluso però manda email **solo ai
    membri del progetto** (cioè a te) e poche all'ora: va bene per la prova con Tommaso.
-5. **Prima di aprire ad altre famiglie** (facoltativo per la prova): in **Authentication → SMTP**
-   collega un servizio email (es. Brevo, gratuito per poche centinaia di email al giorno). Da quel
-   momento puoi anche modificare i modelli in **Authentication → Emails**: in **Magic link or OTP** e
-   **Confirm sign up** aggiungi `{{ .Token }}` per mandare anche un codice da digitare, ad esempio
-   `<p>Il tuo codice: <strong>{{ .Token }}</strong></p>`.
+5. **Email a qualsiasi indirizzo (necessario per far entrare altre persone)**: collega un servizio
+   email. Esempio con **Brevo** (gratuito fino a circa 300 email al giorno):
+   1. Crea un account su brevo.com.
+   2. **Senders, Domains & Dedicated IPs → Senders → Add a sender**: nome `Studio Amico`, la tua
+      email; conferma con il link che ricevi. (Più avanti, con un dominio tuo, verifica il dominio:
+      le email finiscono meno nello spam.)
+   3. **SMTP & API → SMTP → Generate a new SMTP key**: copia la chiave e il **Login** SMTP.
+   4. In Supabase: **Authentication → Emails → SMTP Settings → Enable custom SMTP**:
+      - Sender email: l'email verificata su Brevo · Sender name: `Studio Amico`
+      - Host: `smtp-relay.brevo.com` · Port: `587`
+      - Username: il Login SMTP di Brevo · Password: la chiave SMTP
+   5. **Authentication → Rate Limits**: alza il limite di email all'ora (es. 100).
+   Da quel momento puoi anche modificare i modelli in **Authentication → Emails**: in
+   **Magic link or OTP** e **Confirm sign up** aggiungi `{{ .Token }}` per mandare anche un codice
+   da digitare, ad esempio `<p>Il tuo codice: <strong>{{ .Token }}</strong></p>`.
 6. **Project Settings → API Keys**: copia
    - **Project URL** → sarà `SUPABASE_URL`
    - **Publishable key** → `SUPABASE_PUBLISHABLE_KEY`
@@ -56,7 +68,8 @@ Telefono ──► Server Studio Amico (Render/Fly, Francoforte) ──► API A
    Render legge `render.yaml` (nella radice del repository) e propone il servizio `studio-amico`
    a Francoforte.
 3. Ti chiede i valori segreti: incolla `ANTHROPIC_API_KEY`, `SUPABASE_URL`,
-   `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
+   `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` e in `ADMIN_EMAILS` la tua email
+   (vedrai **Impostazioni → Amministrazione** con l'elenco degli iscritti).
 4. Premi **Apply**. Dopo qualche minuto l'app è su `https://studio-amico.onrender.com` (o simile).
 5. Prova `https://…/api/salute`: deve rispondere `{"ok":true}`.
 
@@ -94,12 +107,14 @@ fly deploy
 |---|---|---|
 | `LIMITE_PROVA` | 5 | schede al mese per famiglia in prova |
 | `LIMITE_ABBONATO` | 40 | schede al mese con abbonamento (pagamenti: fase successiva) |
+| `ADMIN_EMAILS` | — | email (separate da virgola) che vedono l'area Amministrazione |
 | `VERIFICHE_PER_SCHEDA` | 3 | controlli dei tentativi al mese = limite schede × questo numero |
 | `CLAUDE_MODEL` | `claude-opus-5-5` | modello usato |
 | `CLAUDE_EFFORT` | `medium` | profondità di ragionamento |
 
-Per passare a mano una famiglia ad "abbonato" (prima dei pagamenti automatici): in Supabase,
-tabella `famiglie`, imposta `piano = abbonato` e, se vuoi, `abbonamento_scade`.
+Per passare a mano una famiglia ad "abbonato" (prima dei pagamenti automatici): nell'app,
+**Impostazioni → Amministrazione**, scegli il piano e l'eventuale scadenza e premi **Salva**.
+Da lì puoi anche scaricare l'elenco degli iscritti in CSV.
 
 ## Costi indicativi all'avvio
 

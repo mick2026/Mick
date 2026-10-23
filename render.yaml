@@ -23,6 +23,8 @@ services:
         value: "40"
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: ADMIN_EMAILS
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY

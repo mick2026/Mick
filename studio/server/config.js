@@ -35,6 +35,8 @@ export const CONFIG = {
     profiliPerFamiglia: 6,
   },
   versioneConsenso: "2026-10",
+  // Email (separate da virgola) che vedono l'area Amministrazione.
+  admin: (env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
 };
 
 export function verificaConfig() {

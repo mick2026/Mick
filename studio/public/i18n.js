@@ -101,6 +101,11 @@ export const DIZ = {
     esportaDati: "Scarica tutti i dati", eliminaAccount: "Elimina account",
     eliminaAccountTesto: "Cancella definitivamente account, profili e schede. Non si può annullare.",
     scriviElimina: "Scrivi ELIMINA per confermare", accountEliminato: "Account eliminato.",
+    admin: "Amministrazione", apriAdmin: "Apri l'elenco degli iscritti", adminFamiglie: "famiglie", adminAbbonati: "abbonate",
+    adminSchedeMese: "schede questo mese", adminCerca: "Cerca per email", adminCsv: "Scarica elenco (CSV)", adminSenzaEmail: "(email non registrata)",
+    adminIscritta: "Iscritta il", adminConsenso: "consenso", adminProfili: "profili", adminSchedeTot: "schede in tutto",
+    adminMese: "Questo mese", adminSchede: "schede", adminVerifiche: "controlli tentativi", adminPiano: "Piano", adminScade: "Scadenza abbonamento",
+    adminNotaPrivacy: "Qui compaiono solo i dati per gestire gli iscritti: niente nomi dei ragazzi né contenuto delle schede.",
   },
   en: {
     ...MATERIE_EN,
@@ -186,6 +191,11 @@ export const DIZ = {
     esportaDati: "Download all data", eliminaAccount: "Delete account",
     eliminaAccountTesto: "Permanently deletes the account, profiles and cards. This cannot be undone.",
     scriviElimina: "Type ELIMINA to confirm", accountEliminato: "Account deleted.",
+    admin: "Administration", apriAdmin: "Open the list of members", adminFamiglie: "families", adminAbbonati: "subscribed",
+    adminSchedeMese: "cards this month", adminCerca: "Search by email", adminCsv: "Download list (CSV)", adminSenzaEmail: "(email not recorded)",
+    adminIscritta: "Joined", adminConsenso: "consent", adminProfili: "profiles", adminSchedeTot: "cards in total",
+    adminMese: "This month", adminSchede: "cards", adminVerifiche: "attempt checks", adminPiano: "Plan", adminScade: "Subscription end",
+    adminNotaPrivacy: "Only the data needed to manage members is shown here: no children's names or card content.",
   },
 };
 

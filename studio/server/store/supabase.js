@@ -12,8 +12,13 @@ export function creaStoreSupabase({ url, chiaveSegreta }) {
   };
 
   return {
-    async famiglia(id) {
+    async famiglia(id, email) {
       ok(await sb.from("famiglie").upsert({ id }, { onConflict: "id", ignoreDuplicates: true }));
+      // L'email serve all'area amministrazione (colonna aggiunta da 002_email_famiglie.sql).
+      if (email) {
+        const { error } = await sb.from("famiglie").update({ email }).eq("id", id);
+        if (error) console.error("[db] email della famiglia non salvata:", error.message);
+      }
       return ok(await sb.from("famiglie").select("*").eq("id", id).single());
     },
     async salvaConsenso(fid, versione) {
@@ -61,6 +66,24 @@ export function creaStoreSupabase({ url, chiaveSegreta }) {
     // Atomico lato database (funzione consuma_quota): due richieste insieme non superano il limite.
     async consuma(fid, mese, tipo, limite, delta = 1) {
       return ok(await sb.rpc("consuma_quota", { p_famiglia: fid, p_mese: mese, p_tipo: tipo, p_limite: limite, p_delta: delta })) === true;
+    },
+
+    // Area amministrazione: dati di servizio, senza nomi dei ragazzi né contenuto delle schede.
+    async elencoFamiglie(mese) {
+      const [famiglie, uso] = await Promise.all([
+        sb.from("famiglie").select("id, email, creata, piano, abbonamento_scade, consenso_versione, consenso_at, profili(count), schede(count)").order("creata", { ascending: false }).then(ok),
+        sb.from("utilizzo").select("famiglia_id, schede, verifiche").eq("mese", mese).then(ok),
+      ]);
+      const perFamiglia = new Map(uso.map((u) => [u.famiglia_id, { schede: u.schede, verifiche: u.verifiche }]));
+      return famiglie.map((f) => ({
+        ...f,
+        profili: f.profili?.[0]?.count ?? 0,
+        schede: f.schede?.[0]?.count ?? 0,
+        mese: perFamiglia.get(f.id) ?? { schede: 0, verifiche: 0 },
+      }));
+    },
+    async aggiornaPiano(fid, campi) {
+      return ok(await sb.from("famiglie").update(campi).eq("id", fid).select().maybeSingle());
     },
 
     async esporta(fid) {

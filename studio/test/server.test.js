@@ -10,7 +10,7 @@ let srv;
 
 before(async () => {
   srv = spawn(process.execPath, ["server/index.js"], {
-    env: { ...process.env, DEMO: "1", AUTH: "dev", STORE: "memoria", PORT: String(PORT), LIMITE_PROVA: "2", NODE_ENV: "test" },
+    env: { ...process.env, DEMO: "1", AUTH: "dev", STORE: "memoria", PORT: String(PORT), LIMITE_PROVA: "2", NODE_ENV: "test", ADMIN_EMAILS: "admin@prova.it", TRUST_PROXY: "1" },
     stdio: "ignore",
   });
   for (let i = 0; i < 50; i++) {
@@ -19,10 +19,16 @@ before(async () => {
 });
 after(() => srv.kill());
 
+// Ogni chiamata da un IP diverso (dietro proxy), così i limiti anti-abuso per IP non scattano tra un test e l'altro.
+let ip = 0;
 const chiama = async (metodo, p, body, token) => {
   const r = await fetch(BASE + p, {
     method: metodo,
-    headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: "Bearer " + token } : {}) },
+    headers: {
+      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+      "X-Forwarded-For": `10.0.0.${++ip % 250}`,
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: r.status, dati: await r.json().catch(() => null) };
@@ -147,4 +153,25 @@ test("in produzione non parte con login finto o senza chiavi", async () => {
   assert.equal(codice, 1);
   assert.match(err, /AUTH=supabase/);
   assert.match(err, /ANTHROPIC_API_KEY/);
+});
+
+test("area amministrazione: solo per ADMIN_EMAILS, senza nomi dei ragazzi; il piano alza il limite", async () => {
+  const fam = await famigliaPronta("iscritto@prova.it");
+  assert.equal((await chiama("GET", "/api/admin/famiglie", null, fam.token)).status, 403);
+  assert.equal((await chiama("GET", "/api/io", null, fam.token)).dati.admin, false);
+
+  const admin = await famigliaPronta("Admin@Prova.it");
+  assert.equal((await chiama("GET", "/api/io", null, admin.token)).dati.admin, true);
+  const elenco = await chiama("GET", "/api/admin/famiglie", null, admin.token);
+  assert.equal(elenco.status, 200);
+  const riga = elenco.dati.find((f) => f.email === "iscritto@prova.it");
+  assert.ok(riga);
+  assert.equal(riga.profili, 1);
+  assert.ok(!JSON.stringify(elenco.dati).includes("Tommaso"), "niente nomi dei profili");
+
+  assert.equal((await chiama("PATCH", `/api/admin/famiglie/${riga.id}`, { piano: "vip" }, admin.token)).status, 400);
+  assert.equal((await chiama("PATCH", `/api/admin/famiglie/${riga.id}`, { piano: "abbonato" }, fam.token)).status, 403);
+  const p = await chiama("PATCH", `/api/admin/famiglie/${riga.id}`, { piano: "abbonato", abbonamento_scade: "2099-12-31" }, admin.token);
+  assert.equal(p.status, 200);
+  assert.equal((await chiama("GET", "/api/io", null, fam.token)).dati.utilizzo.limiteSchede, 40);
 });

@@ -10,8 +10,9 @@ export function creaStoreMemoria(file = "") {
   const ora = () => new Date().toISOString();
 
   return {
-    async famiglia(id) {
-      db.famiglie[id] ??= { id, creata: ora(), piano: "prova", abbonamento_scade: null, consenso_versione: null, consenso_at: null };
+    async famiglia(id, email) {
+      db.famiglie[id] ??= { id, email: null, creata: ora(), piano: "prova", abbonamento_scade: null, consenso_versione: null, consenso_at: null };
+      if (email) db.famiglie[id].email = email;
       persisti();
       return copia(db.famiglie[id]);
     },
@@ -85,6 +86,25 @@ export function creaStoreMemoria(file = "") {
       u[tipo] = Math.max(0, u[tipo] + delta);
       persisti();
       return true;
+    },
+
+    // Area amministrazione: dati di servizio, senza nomi dei ragazzi né contenuto delle schede.
+    async elencoFamiglie(mese) {
+      const conta = (t, fid) => Object.values(db[t]).filter((r) => r.famiglia_id === fid).length;
+      return Object.values(db.famiglie)
+        .map((f) => ({
+          ...copia(f),
+          profili: conta("profili", f.id),
+          schede: conta("schede", f.id),
+          mese: copia(db.utilizzo[`${f.id}|${mese}`] ?? { schede: 0, verifiche: 0 }),
+        }))
+        .sort((a, b) => b.creata.localeCompare(a.creata));
+    },
+    async aggiornaPiano(fid, campi) {
+      if (!db.famiglie[fid]) return null;
+      Object.assign(db.famiglie[fid], campi);
+      persisti();
+      return copia(db.famiglie[fid]);
     },
 
     async esporta(fid) {

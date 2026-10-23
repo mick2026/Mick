@@ -510,6 +510,8 @@ function vistaImpostazioni() {
     <div id="form-profilo"></div>
     <a class="btn btn-sec" href="#/profili">＋ ${t("aggiungiProfilo")}</a>
 
+    ${io.admin ? `<h2>🛠️ ${t("admin")}</h2><a class="btn btn-sec" href="#/admin">${t("apriAdmin")}</a>` : ""}
+
     <h2>👤 ${t("account")}</h2>
     <p>${esc(io.email)}</p>
     <p class="nota">${testoUtilizzo()}</p>
@@ -577,6 +579,68 @@ function vistaImpostazioni() {
   };
 }
 
+// ---------- amministrazione (solo email in ADMIN_EMAILS) ----------
+async function vistaAdmin() {
+  if (!io.admin) return (location.hash = "#/impostazioni");
+  const famiglie = await api("GET", "/api/admin/famiglie");
+  const data = (iso) => (iso ? dataBreve(iso) : "—");
+  const abbonati = famiglie.filter((f) => f.piano === "abbonato").length;
+  const schedeMese = famiglie.reduce((n, f) => n + f.mese.schede, 0);
+
+  app.innerHTML = `<section class="pannello">
+    <h1>🛠️ ${t("admin")}</h1>
+    <div class="numeri">
+      <div><strong>${famiglie.length}</strong><span>${t("adminFamiglie")}</span></div>
+      <div><strong>${abbonati}</strong><span>${t("adminAbbonati")}</span></div>
+      <div><strong>${schedeMese}</strong><span>${t("adminSchedeMese")}</span></div>
+    </div>
+    <label class="campo" for="cerca">${t("adminCerca")}<input id="cerca" type="search" autocomplete="off"></label>
+    <button class="btn btn-sec" id="csv">⬇️ ${t("adminCsv")}</button>
+    <ul class="elenco" id="lista-famiglie">${famiglie.map((f) => `<li class="famiglia" data-email="${esc((f.email ?? "").toLowerCase())}">
+      <p><strong>${esc(f.email ?? t("adminSenzaEmail"))}</strong></p>
+      <p class="meta">${t("adminIscritta")} ${data(f.creata)} · ${t("adminConsenso")} ${data(f.consenso_at)} · ${f.profili} ${t("adminProfili")} · ${f.schede} ${t("adminSchedeTot")}</p>
+      <p class="meta">${t("adminMese")}: ${f.mese.schede}/${f.limiteSchede} ${t("adminSchede")}, ${f.mese.verifiche} ${t("adminVerifiche")}</p>
+      <div class="riga-piano">
+        <select data-piano="${f.id}" aria-label="${t("adminPiano")}">
+          <option value="prova" ${f.piano === "prova" ? "selected" : ""}>${t("pianoProva")}</option>
+          <option value="abbonato" ${f.piano === "abbonato" ? "selected" : ""}>${t("pianoAbbonato")}</option>
+        </select>
+        <input type="date" data-scade="${f.id}" value="${f.abbonamento_scade ? f.abbonamento_scade.slice(0, 10) : ""}" aria-label="${t("adminScade")}">
+        <button class="btn btn-sec" data-salva-piano="${f.id}">${t("salva")}</button>
+      </div>
+    </li>`).join("")}</ul>
+    <p class="nota">${t("adminNotaPrivacy")}</p>
+  </section>`;
+
+  $("#cerca").oninput = (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    app.querySelectorAll(".famiglia").forEach((li) => (li.hidden = q && !li.dataset.email.includes(q)));
+  };
+  $("#csv").onclick = () => {
+    const cella = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const righe = [["email", "iscritta", "consenso", "piano", "scadenza", "profili", "schede_totali", "schede_mese", "limite_mese", "verifiche_mese"]]
+      .concat(famiglie.map((f) => [f.email, f.creata, f.consenso_at, f.piano, f.abbonamento_scade, f.profili, f.schede, f.mese.schede, f.limiteSchede, f.mese.verifiche]))
+      .map((r) => r.map(cella).join(","));
+    scarica(new Blob(["\ufeff" + righe.join("\n")], { type: "text/csv" }), `studio-amico-iscritti-${new Date().toISOString().slice(0, 10)}.csv`);
+  };
+  app.onclick = async (ev) => {
+    const b = ev.target.closest("[data-salva-piano]");
+    if (!b) return;
+    const id = b.dataset.salvaPiano;
+    try {
+      await api("PATCH", `/api/admin/famiglie/${id}`, {
+        piano: app.querySelector(`[data-piano="${id}"]`).value,
+        abbonamento_scade: app.querySelector(`[data-scade="${id}"]`).value || null,
+      });
+      toast(t("salvato"));
+      if (id === io.famiglia.id) await aggiornaIo();
+      vistaAdmin();
+    } catch (e) {
+      toast(e.message);
+    }
+  };
+}
+
 function vistaPrivacy() {
   app.innerHTML = `<section class="pannello testo">
     <h1>🔒 ${t("privacyTitolo")}</h1>
@@ -635,6 +699,7 @@ async function router() {
       case "archivio": return await vistaArchivio();
       case "ripasso": return await vistaRipasso();
       case "impostazioni": return vistaImpostazioni();
+      case "admin": return await vistaAdmin();
       default: return vistaNuova();
     }
   } catch (e) {

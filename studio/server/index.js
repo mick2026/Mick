@@ -119,7 +119,7 @@ async function profiloDellaFamiglia(fid, pid) {
 }
 
 async function stato(utente) {
-  const famiglia = await store.famiglia(utente.id);
+  const famiglia = await store.famiglia(utente.id, utente.email);
   const [profili, uso] = await Promise.all([store.profili(utente.id), store.utilizzo(utente.id, meseCorrente())]);
   const limite = limiteSchede(famiglia);
   return {
@@ -141,6 +141,11 @@ async function conQuota(fid, tipo, limite, lavoro) {
     await store.consuma(fid, mese, tipo, limite, -1).catch(() => {});
     throw e;
   }
+}
+
+const eAdmin = (utente) => Boolean(utente.email) && CONFIG.admin.includes(utente.email.toLowerCase());
+function soloAdmin(utente) {
+  if (!eAdmin(utente)) throw new HttpError(403, "Area riservata all'amministrazione.");
 }
 
 // ---------- rotte ----------
@@ -172,7 +177,19 @@ const pubbliche = {
 };
 
 const private_ = {
-  "GET /api/io": async ({ utente }) => ({ email: utente.email, ...(await stato(utente)) }),
+  "GET /api/io": async ({ utente }) => ({ email: utente.email, admin: eAdmin(utente), ...(await stato(utente)) }),
+  "GET /api/admin/famiglie": async ({ utente }) => {
+    soloAdmin(utente);
+    const mese = meseCorrente();
+    return (await store.elencoFamiglie(mese)).map((f) => ({ ...f, limiteSchede: limiteSchede(f) }));
+  },
+  "PATCH /api/admin/famiglie/:id": async ({ utente, body, id }) => {
+    soloAdmin(utente);
+    const f = await store.aggiornaPiano(V.uuid(id), V.piano(body));
+    if (!f) throw new HttpError(404, "Famiglia non trovata.");
+    console.log(`[admin] piano aggiornato: famiglia ${f.id} -> ${f.piano}`);
+    return f;
+  },
   "POST /api/auth/esci": async ({ token }) => (await auth.esci(token), { ok: true }),
   "POST /api/consenso": async ({ utente, body }) => {
     if (body.genitore !== true) throw new V.InputError("Serve la conferma del genitore o tutore.");

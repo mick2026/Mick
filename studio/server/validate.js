@@ -112,3 +112,14 @@ export function controllaScheda(s) {
   }
   return s;
 }
+
+export function piano(body) {
+  const piano = tra(body.piano, ["prova", "abbonato"]);
+  if (!piano) throw new InputError("Piano non valido.");
+  let scade = null;
+  if (body.abbonamento_scade) {
+    if (typeof body.abbonamento_scade !== "string" || Number.isNaN(Date.parse(body.abbonamento_scade))) throw new InputError("Data di scadenza non valida.");
+    scade = new Date(body.abbonamento_scade).toISOString();
+  }
+  return { piano, abbonamento_scade: piano === "abbonato" ? scade : null };
+}

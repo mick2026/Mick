@@ -178,6 +178,15 @@ details summary { cursor: pointer; color: var(--pri); font-weight: 600; margin: 
 .pericolo-zona { margin: 20px 0 8px; border-top: 1px solid var(--line); padding-top: 8px; }
 .pericolo-zona summary { color: var(--no); }
 
+.numeri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.numeri div { background: var(--soft); border-radius: 12px; padding: 10px; text-align: center; display: flex; flex-direction: column; }
+.numeri strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.numeri span { font-size: .8rem; color: var(--ink-soft); }
+.famiglia { padding: 10px 0; }
+.famiglia p { margin: 2px 0; overflow-wrap: anywhere; }
+.riga-piano { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.riga-piano select, .riga-piano input { padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); min-height: 40px; }
+
 /* ---------- Stampa A4 ---------- */
 @page { size: A4; margin: 15mm 14mm; }
 @media print {
