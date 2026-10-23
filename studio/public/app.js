@@ -732,6 +732,15 @@ async function router() {
   }
   if (!io.famiglia.consenso_at) return vistaConsenso();
   if (io.approvazione && io.famiglia.stato !== "approvata" && !io.admin) return vistaAttesa();
+  // L'amministrazione si apre anche se l'amministratore non ha ancora creato profili.
+  if (vista === "admin" && io.admin) {
+    menu.hidden = false;
+    try {
+      return await vistaAdmin();
+    } catch (e) {
+      return toast(e.message);
+    }
+  }
   if (vista === "profili" || !profiloCorrente()) {
     if (vista !== "profili" && io.profili.length === 1) pref("profilo", io.profili[0].id);
     else return vistaProfili();
