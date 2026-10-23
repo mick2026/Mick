@@ -6,7 +6,8 @@ services:
     dockerfilePath: ./studio/Dockerfile
     dockerContext: ./studio
     region: frankfurt
-    plan: starter
+    # free per le prove (si "addormenta" dopo 15 minuti); starter (~7 $/mese) per l'uso quotidiano
+    plan: free
     healthCheckPath: /api/salute
     autoDeploy: false
     envVars:

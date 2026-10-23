@@ -60,8 +60,8 @@ Telefono ──► Server Studio Amico (Render/Fly, Francoforte) ──► API A
 4. Premi **Apply**. Dopo qualche minuto l'app è su `https://studio-amico.onrender.com` (o simile).
 5. Prova `https://…/api/salute`: deve rispondere `{"ok":true}`.
 
-Il piano `starter` costa circa 7 $/mese e resta sempre acceso. Il piano gratuito si "addormenta" e la
-prima apertura dopo una pausa è lenta: va bene solo per prove.
+Il `render.yaml` parte con il piano gratuito, che si "addormenta" dopo 15 minuti senza uso: la
+prima apertura dopo una pausa impiega 30–60 secondi. Per l'uso quotidiano passa al piano `starter` (~7 $/mese, sempre acceso).
 
 ## 3b. Fly.io (alternativa)
 
