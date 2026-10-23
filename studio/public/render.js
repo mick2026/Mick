@@ -4,7 +4,8 @@ import { t, lang } from "./i18n.js";
 export const ELENCO_MATERIE = [
   ["italiano", "📖"], ["matematica", "➗"], ["fisica", "🧲"], ["scienze", "🔬"], ["storia", "🏛️"],
   ["geografia", "🌍"], ["inglese", "🗣️"], ["latino_greco", "🏺"], ["filosofia", "🤔"], ["arte", "🎨"],
-  ["informatica", "💻"], ["educazione_civica", "⚖️"], ["altro", "📚"],
+  ["informatica", "💻"], ["educazione_civica", "⚖️"], ["diritto_economia", "📊"], ["scienze_umane", "🧠"],
+  ["musica", "🎵"], ["altro", "📚"],
 ];
 export const emojiMateria = (k) => (ELENCO_MATERIE.find(([m]) => m === k) ?? ELENCO_MATERIE.at(-1))[1];
 
@@ -103,7 +104,7 @@ export function renderScheda(s, modo = "app") {
 
   return `<div class="scheda">
     <header class="scheda-head">
-      <p class="meta">${emojiMateria(s.materia)} ${esc(t("materia_" + s.materia))} · ${esc(dataBreve(s.creata))} ${tipo}</p>
+      <p class="meta">${esc(s.materiaEmoji || emojiMateria(s.materia))} ${esc(s.materiaNome || t("materia_" + s.materia))} · ${esc(dataBreve(s.creata))} ${tipo}</p>
       <h1>${esc(s.titolo)}</h1>
     </header>
     ${avvisi}

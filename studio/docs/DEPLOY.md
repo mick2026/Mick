@@ -34,7 +34,8 @@ Telefono ──► Server Studio Amico (Render/Fly, Francoforte) ──► API A
    Crea le tabelle (famiglie, profili, schede, utilizzo) chiuse a chiunque tranne il server.
    Poi, in nuove query, esegui anche `supabase/migrations/002_email_famiglie.sql` (email del
    genitore per l'area amministrazione) e `supabase/migrations/003_approvazione_costi.sql`
-   (approvazione delle iscrizioni e registro dei costi di Claude).
+   (approvazione delle iscrizioni e registro dei costi di Claude) e `supabase/migrations/004_materie_profilo.sql`
+   (scuola e materie personalizzate dei profili).
 3. **Authentication → Sign In / Providers → Email**: lascia attivo Email.
 4. **Email di accesso**: con il servizio email incluso in Supabase arriva un **link** "Log In".
    L'app lo accetta così com'è: basta toccarlo. Il servizio incluso però manda email **solo ai

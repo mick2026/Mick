@@ -13,6 +13,7 @@ import { generaScheda, generaRipasso, verificaTentativo, RifiutoError } from "./
 import { contenutoPerRipasso } from "./prompt.js";
 import { schedaDemo, verificaDemo } from "./demo.js";
 import { avvisaNuovaIscrizione, avvisaApprovazione } from "./notifiche.js";
+import { SCUOLE } from "../public/scuole.js";
 
 try {
   verificaConfig();
@@ -108,8 +109,12 @@ async function leggiJSON(req) {
 function riepilogo(dati) {
   const s = dati.sessioni?.at(-1);
   const t = dati.test?.at(-1);
-  return { inizio: s?.inizio ?? null, fine: s?.fine ?? null, test: t ? { ok: t.ok, tot: t.tot } : null };
+  return {
+    inizio: s?.inizio ?? null, fine: s?.fine ?? null, test: t ? { ok: t.ok, tot: t.tot } : null,
+    materiaNome: dati.materiaNome || null, materiaEmoji: dati.materiaEmoji || null,
+  };
 }
+const scuolaNome = (p) => (p.scuola && SCUOLE[p.scuola] ? SCUOLE[p.scuola].nome : "");
 const perClient = (riga) => ({ ...riga.dati, id: riga.id, profilo_id: riga.profilo_id, materia: riga.materia, tipo: riga.tipo, creata: riga.creata });
 const voceElenco = ({ id, profilo_id, materia, tipo, titolo, creata, riepilogo }) => ({ id, profilo_id, materia, tipo, titolo, creata, riepilogo });
 
@@ -290,10 +295,10 @@ const conConsenso = {
     const input = V.nuovaScheda(body);
     const p = await profiloDellaFamiglia(utente.id, input.profilo);
     const out = await conQuota(utente.id, "schede", limiteSchede(famiglia), { tipo: "scheda", immagini: input.immagini.length }, async () =>
-      CONFIG.demo ? { dati: schedaDemo(), consumo: CONSUMO_DEMO } : generaScheda({ ...input, livello: p.livello, lingua: p.lingua }),
+      CONFIG.demo ? { dati: schedaDemo(), consumo: CONSUMO_DEMO } : generaScheda({ ...input, livello: p.livello, lingua: p.lingua, scuolaNome: scuolaNome(p) }),
     );
     const ora = new Date().toISOString();
-    const dati = { ...V.controllaScheda(out), lingua: p.lingua, livello: p.livello, sessioni: [{ data: ora, inizio: input.energia, fine: null }], esiti: {}, test: [] };
+    const dati = { ...V.controllaScheda(out), materiaNome: input.materiaNome, materiaEmoji: input.materiaEmoji, lingua: p.lingua, livello: p.livello, sessioni: [{ data: ora, inizio: input.energia, fine: null }], esiti: {}, test: [] };
     const riga = await store.creaScheda({
       famiglia_id: utente.id, profilo_id: p.id, materia: input.materia, tipo: "scheda", titolo: String(dati.titolo).slice(0, 200), riepilogo: riepilogo(dati), dati,
     });
@@ -305,12 +310,13 @@ const conConsenso = {
     const righe = (await store.schedePerId(utente.id, input.ids)).filter((r) => r.profilo_id === p.id);
     if (!righe.length) throw new HttpError(404, "Schede non trovate.");
     const materia = righe[0].materia;
+    const { materiaNome = "", materiaEmoji = "" } = righe[0].dati;
     const out = await conQuota(utente.id, "schede", limiteSchede(famiglia), { tipo: "ripasso", immagini: 0 }, async () =>
       CONFIG.demo
         ? { dati: schedaDemo("Ripasso (demo)"), consumo: CONSUMO_DEMO }
-        : generaRipasso({ materia, livello: p.livello, lingua: p.lingua, modalita: input.modalita, schede: righe.map((r) => contenutoPerRipasso(r.dati)) }),
+        : generaRipasso({ materia, materiaNome, scuolaNome: scuolaNome(p), livello: p.livello, lingua: p.lingua, modalita: input.modalita, schede: righe.map((r) => contenutoPerRipasso(r.dati)) }),
     );
-    const dati = { ...V.controllaScheda(out), lingua: p.lingua, livello: p.livello, modalita: input.modalita, fonti: righe.map((r) => r.id), sessioni: [], esiti: {}, test: [] };
+    const dati = { ...V.controllaScheda(out), materiaNome, materiaEmoji, lingua: p.lingua, livello: p.livello, modalita: input.modalita, fonti: righe.map((r) => r.id), sessioni: [], esiti: {}, test: [] };
     const riga = await store.creaScheda({
       famiglia_id: utente.id, profilo_id: p.id, materia, tipo: "ripasso", titolo: String(dati.titolo).slice(0, 200), riepilogo: riepilogo(dati), dati,
     });
@@ -326,7 +332,7 @@ const conConsenso = {
       CONFIG.demo
         ? { dati: verificaDemo(), consumo: CONSUMO_DEMO }
         : verificaTentativo({
-            materia: r.materia, livello: r.dati.livello, lingua: r.dati.lingua,
+            materia: r.materia, materiaNome: r.dati.materiaNome, livello: r.dati.livello, lingua: r.dati.lingua,
             esercizio: { consegna: esercizio.consegna }, contestoScheda: `${r.dati.titolo}. ${r.dati.abstract}`.slice(0, 2000),
             immagini: input.immagini,
           }),

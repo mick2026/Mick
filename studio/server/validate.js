@@ -1,4 +1,5 @@
 import { MATERIE, LIVELLI, LINGUE } from "./pedagogia.js";
+import { SCUOLE, slug } from "../public/scuole.js";
 
 export class InputError extends Error {}
 
@@ -39,6 +40,27 @@ export function profilo(body, parziale = false) {
   }
   if (!parziale || body.livello !== undefined) out.livello = scelta(body.livello, LIVELLI, "media2");
   if (!parziale || body.lingua !== undefined) out.lingua = scelta(body.lingua, LINGUE, "it");
+  if (!parziale || body.scuola !== undefined) out.scuola = Object.hasOwn(SCUOLE, body.scuola) ? body.scuola : null;
+  if (!parziale || body.materie !== undefined) out.materie = materie(body.materie);
+  return out;
+}
+
+const pulito = (v, max) => testo(v, max).replace(/[\u0000-\u001f\u007f<>]/g, "").trim();
+
+// Materie del profilo: nome libero, emoji facoltativa, area didattica tra quelle note.
+export function materie(lista) {
+  if (lista == null) return [];
+  if (!Array.isArray(lista) || lista.length > 40) throw new InputError("Al massimo 40 materie.");
+  const visti = new Set();
+  const out = [];
+  for (const x of lista) {
+    const nome = pulito(x?.nome, 80);
+    if (!nome) continue;
+    let id = slug(x?.id || nome);
+    while (visti.has(id)) id = `${id}-2`.slice(0, 60);
+    visti.add(id);
+    out.push({ id, nome, emoji: [...pulito(x?.emoji, 16)].slice(0, 2).join("") || "📚", area: scelta(x?.area, MATERIE, "altro") });
+  }
   return out;
 }
 
@@ -59,6 +81,8 @@ export function nuovaScheda(body) {
   return {
     profilo: uuid(body.profilo),
     materia: scelta(body.materia, MATERIE, "altro"),
+    materiaNome: pulito(body.materiaNome, 80),
+    materiaEmoji: [...pulito(body.materiaEmoji, 16)].slice(0, 2).join(""),
     energia: tra(body.energia, ["poca", "media", "tanta"]) ?? "media",
     note: testo(body.note, 500),
     immagini: immagini(body.immagini),

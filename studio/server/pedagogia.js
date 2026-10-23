@@ -65,6 +65,18 @@ export const MATERIE = {
     nome: "Educazione civica",
     guida: `Costituzione e istituzioni con esempi concreti. Su temi politici attuali: presenta più punti di vista in modo equilibrato, nessuna propaganda.`,
   },
+  diritto_economia: {
+    nome: "Diritto ed economia",
+    guida: `Parti da casi concreti (un contratto, uno scontrino, una notizia) per arrivare alla norma o al concetto economico. Cura il lessico tecnico con definizioni semplici. Esercizi di applicazione a situazioni reali e di calcolo dove serve (es. economia aziendale), senza dare i risultati. Su temi politici ed economici attuali presenta più punti di vista in modo equilibrato.`,
+  },
+  scienze_umane: {
+    nome: "Scienze umane",
+    guida: `Psicologia, pedagogia, sociologia e antropologia: collega teorie e autori a esempi della vita quotidiana e scolastica. Distingui ricerca empirica e opinione. Evita etichette diagnostiche sulle persone e tratta con delicatezza temi come disagio, famiglia, disabilità.`,
+  },
+  musica: {
+    nome: "Musica",
+    guida: `Collega teoria, ascolto e storia della musica: invita ad ascoltare brani citati (titoli e autori, senza link) e a riconoscere elementi (ritmo, timbro, forma). Lessico musicale spiegato con esempi. Attività pratiche brevi (battere un ritmo, cantare una scala).`,
+  },
   altro: {
     nome: "Altra materia",
     guida: `Applica i principi generali.`,

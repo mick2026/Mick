@@ -2,6 +2,7 @@ import { t, lang, setLang, LINGUE_UI, applicaTraduzioni } from "./i18n.js";
 import { pref, cancellaPref } from "./db.js";
 import { preparaImmagine } from "./img.js";
 import { esportaHTML, scarica } from "./export.js";
+import { SCUOLE, materieProposte, slug } from "./scuole.js";
 import {
   ELENCO_MATERIE, UMORE_INIZIO, UMORE_FINE, emojiMateria, esc, dataBreve,
   renderScheda, attivaBase, etichetteBase,
@@ -179,15 +180,46 @@ function vistaConsenso() {
 }
 
 // ---------- profili ----------
+function opzioniLivello(scuola, scelto) {
+  const ammessi = SCUOLE[scuola]?.livelli ?? LIVELLI;
+  const valore = ammessi.includes(scelto) ? scelto : ammessi[0];
+  return ammessi.map((k) => `<option value="${k}" ${k === valore ? "selected" : ""}>${t("livello_" + k)}</option>`).join("");
+}
+
 function campiProfilo(p = {}) {
   return `<label class="campo" for="p-nome">${t("nomeProfilo")}<input id="p-nome" maxlength="40" autocomplete="off" value="${esc(p.nome ?? "")}" placeholder="${t("nomeProfiloEsempio")}"></label>
     <p class="nota">${t("notaNomeProfilo")}</p>
+    <label class="campo" for="p-scuola">${t("scuola")}
+      <select id="p-scuola"><option value="">${t("scuolaNonIndicata")}</option>${Object.entries(SCUOLE).map(([k, v]) => `<option value="${k}" ${k === p.scuola ? "selected" : ""}>${esc(v.nome)}</option>`).join("")}</select></label>
+    <p class="nota">${t("notaScuola")}</p>
     <label class="campo" for="p-livello">${t("classe")}
-      <select id="p-livello">${LIVELLI.map((k) => `<option value="${k}" ${k === (p.livello ?? "media2") ? "selected" : ""}>${t("livello_" + k)}</option>`).join("")}</select></label>
+      <select id="p-livello">${opzioniLivello(p.scuola, p.livello ?? "media2")}</select></label>
     <label class="campo" for="p-lingua">${t("linguaSchede")}
       <select id="p-lingua">${LINGUE_SCHEDE.map((k) => `<option value="${k}" ${k === (p.lingua ?? lang()) ? "selected" : ""}>${t("lingua_" + k)}</option>`).join("")}</select></label>`;
 }
-const leggiCampiProfilo = () => ({ nome: $("#p-nome").value, livello: $("#p-livello").value, lingua: $("#p-lingua").value });
+// La classe proposta segue il tipo di scuola scelto.
+function collegaCampiProfilo() {
+  const sc = $("#p-scuola");
+  if (sc) sc.onchange = () => ($("#p-livello").innerHTML = opzioniLivello(sc.value, $("#p-livello").value));
+}
+const leggiCampiProfilo = () => ({
+  nome: $("#p-nome").value, scuola: $("#p-scuola").value || null, livello: $("#p-livello").value, lingua: $("#p-lingua").value,
+});
+
+// Materie del profilo; se non ne ha, l'elenco generale di aree.
+function materieDi(p) {
+  if (p?.materie?.length) return p.materie;
+  return ELENCO_MATERIE.map(([k, e]) => ({ id: k, nome: t("materia_" + k), emoji: e, area: k }));
+}
+const opzioniArea = (scelta = "altro") =>
+  ELENCO_MATERIE.map(([k, e]) => `<option value="${k}" ${k === scelta ? "selected" : ""}>${e} ${t("materia_" + k)}</option>`).join("");
+
+// Aggiunge una materia al profilo e la salva sul server.
+async function aggiungiMateria(p, { nome, emoji, area }) {
+  const nuove = [...(p.materie?.length ? p.materie : []), { id: slug(nome), nome, emoji, area }];
+  Object.assign(p, await api("PATCH", `/api/profili/${p.id}`, { materie: nuove }));
+  return p.materie.at(-1);
+}
 
 function vistaProfili() {
   const nuovo = !io.profili.length;
@@ -204,6 +236,7 @@ function vistaProfili() {
           <div class="sinistra">${campiProfilo()}<button class="btn btn-pri" id="crea-profilo">${t("creaProfilo")}</button></div>
         </details>
       </section>`;
+  collegaCampiProfilo();
   app.onclick = async (ev) => {
     const b = ev.target.closest("[data-profilo]");
     if (b) {
@@ -213,7 +246,10 @@ function vistaProfili() {
     }
     if (ev.target.closest("#crea-profilo")) {
       try {
-        const p = await api("POST", "/api/profili", leggiCampiProfilo());
+        const campi = leggiCampiProfilo();
+        // Con scuola e classe, le materie vengono proposte dal quadro orario.
+        if (campi.scuola) campi.materie = materieProposte(campi.scuola, campi.livello);
+        const p = await api("POST", "/api/profili", campi);
         io.profili.push(p);
         pref("profilo", p.id);
         aggiornaTestata();
@@ -256,20 +292,41 @@ function vistaNuova() {
     return;
   }
   if (passo === 2) {
+    const p = profiloCorrente();
+    const elenco = materieDi(p);
     app.innerHTML = `<section class="pannello">
       <h1>${t("sceltaMateria")}</h1>
-      <div class="materie">${ELENCO_MATERIE.map(([k, e]) => `<button class="chip" data-materia="${k}"><span>${e}</span> ${t("materia_" + k)}</button>`).join("")}</div>
-      <button class="link" id="indietro">← ${t("indietro")}</button>
+      <div class="materie">${elenco.map((m, i) => `<button class="chip" data-materia="${i}"><span>${esc(m.emoji)}</span> ${esc(m.nome)}</button>`).join("")}</div>
+      <details class="aggiungi" id="nuova-materia"><summary>＋ ${t("nuovaMateria")}</summary>
+        <div class="riquadro">
+          <label class="campo" for="m-nome">${t("nomeMateria")}<input id="m-nome" maxlength="80" autocomplete="off" placeholder="${t("nomeMateriaEsempio")}"></label>
+          <label class="campo" for="m-area">${t("tipoMateria")}<select id="m-area">${opzioniArea()}</select></label>
+          <p class="nota">${t("notaTipoMateria")}</p>
+          <button class="btn btn-pri" id="m-aggiungi">${t("aggiungiEScegli")}</button>
+        </div>
+      </details>
+      <p><a class="link" href="#/materie">✏️ ${t("gestisciMaterie")}</a> · <button class="link" id="indietro">← ${t("indietro")}</button></p>
     </section>`;
-    app.onclick = (ev) => {
+    app.onclick = async (ev) => {
       if (ev.target.id === "indietro") return (bozza.energia = null), vistaNuova();
       const b = ev.target.closest("[data-materia]");
-      if (b) (bozza.materia = b.dataset.materia), vistaNuova();
+      if (b) return (bozza.materia = elenco[Number(b.dataset.materia)]), vistaNuova();
+      if (ev.target.closest("#m-aggiungi")) {
+        const nome = $("#m-nome").value.trim();
+        if (!nome) return toast(t("scriviNomeMateria"));
+        const area = $("#m-area").value;
+        try {
+          bozza.materia = await aggiungiMateria(p, { nome, area, emoji: ELENCO_MATERIE.find(([k]) => k === area)?.[1] ?? "📚" });
+          vistaNuova();
+        } catch (e) {
+          toast(e.message);
+        }
+      }
     };
     return;
   }
   app.innerHTML = `<section class="pannello">
-    <p class="meta">${emojiMateria(bozza.materia)} ${t("materia_" + bozza.materia)} · <button class="link" id="cambia">${t("cambia")}</button></p>
+    <p class="meta">${esc(bozza.materia.emoji)} ${esc(bozza.materia.nome)} · <button class="link" id="cambia">${t("cambia")}</button></p>
     <h1>${t("fotografa")}</h1>
     <p>${t("fotografaTesto")}</p>
     <div class="foto-azioni">
@@ -313,7 +370,9 @@ async function generaScheda() {
   try {
     const scheda = await api("POST", "/api/scheda", {
       profilo: pref("profilo"),
-      materia: bozza.materia,
+      materia: bozza.materia.area,
+      materiaNome: bozza.materia.nome,
+      materiaEmoji: bozza.materia.emoji,
       energia: bozza.energia,
       note: bozza.note,
       immagini: bozza.immagini.map(({ mediaType, data }) => ({ mediaType, data })),
@@ -423,19 +482,23 @@ async function vistaScheda(id) {
 }
 
 // ---------- archivio ----------
+// Le schede si raggruppano per nome della materia (o per area, per le schede create prima delle materie personalizzate).
+const nomeMateriaDi = (s) => s.riepilogo?.materiaNome || t("materia_" + s.materia);
+const emojiMateriaDi = (s) => s.riepilogo?.materiaEmoji || emojiMateria(s.materia);
+
 async function vistaArchivio() {
   const schede = await api("GET", `/api/schede?profilo=${pref("profilo")}`);
-  const filtro = pref("filtroMateria") ?? "";
-  const visibili = filtro ? schede.filter((s) => s.materia === filtro) : schede;
+  const presenti = [...new Set(schede.map(nomeMateriaDi))];
+  const filtro = presenti.includes(pref("filtroMateria")) ? pref("filtroMateria") : "";
+  const visibili = filtro ? schede.filter((s) => nomeMateriaDi(s) === filtro) : schede;
   const gruppi = new Map();
-  for (const s of visibili) gruppi.set(s.materia, [...(gruppi.get(s.materia) ?? []), s]);
-  const presenti = [...new Set(schede.map((s) => s.materia))];
+  for (const s of visibili) gruppi.set(nomeMateriaDi(s), [...(gruppi.get(nomeMateriaDi(s)) ?? []), s]);
 
   app.innerHTML = `<section class="pannello">
     <h1>🗂️ ${t("archivio")} · ${esc(profiloCorrente().nome)}</h1>
     ${schede.length ? `<label class="campo">${t("filtraMateria")}
-      <select id="filtro"><option value="">${t("tutte")}</option>${presenti.map((m) => `<option value="${m}" ${m === filtro ? "selected" : ""}>${t("materia_" + m)}</option>`).join("")}</select></label>` : `<p>${t("archivioVuoto")}</p><a class="btn btn-pri" href="#/nuova">✨ ${t("creaPrima")}</a>`}
-    ${[...gruppi].map(([m, lista]) => `<h2>${emojiMateria(m)} ${t("materia_" + m)} <small>(${lista.length})</small></h2>
+      <select id="filtro"><option value="">${t("tutte")}</option>${presenti.map((m) => `<option value="${esc(m)}" ${m === filtro ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></label>` : `<p>${t("archivioVuoto")}</p><a class="btn btn-pri" href="#/nuova">✨ ${t("creaPrima")}</a>`}
+    ${[...gruppi].map(([m, lista]) => `<h2>${esc(emojiMateriaDi(lista[0]))} ${esc(m)} <small>(${lista.length})</small></h2>
       <ul class="elenco">${lista.map(voceArchivio).join("")}</ul>`).join("")}
   </section>`;
   const sel = $("#filtro");
@@ -454,18 +517,18 @@ function voceArchivio(s) {
 // ---------- ripasso ----------
 async function vistaRipasso() {
   const schede = (await api("GET", `/api/schede?profilo=${pref("profilo")}`)).filter((s) => s.tipo === "scheda");
-  const presenti = [...new Set(schede.map((s) => s.materia))];
+  const presenti = [...new Set(schede.map(nomeMateriaDi))];
   const materia = presenti.includes(pref("materiaRipasso")) ? pref("materiaRipasso") : presenti[0];
   if (!materia) {
     app.innerHTML = `<section class="pannello"><h1>🔁 ${t("ripasso")}</h1><p>${t("ripassoVuoto")}</p></section>`;
     return;
   }
-  const dellaMateria = schede.filter((s) => s.materia === materia);
+  const dellaMateria = schede.filter((s) => nomeMateriaDi(s) === materia);
   app.innerHTML = `<section class="pannello">
     <h1>🔁 ${t("ripasso")}</h1>
     <p>${t("ripassoTesto")}</p>
     <label class="campo">${t("materia")}
-      <select id="mat-rip">${presenti.map((m) => `<option value="${m}" ${m === materia ? "selected" : ""}>${t("materia_" + m)}</option>`).join("")}</select></label>
+      <select id="mat-rip">${presenti.map((m) => `<option value="${esc(m)}" ${m === materia ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></label>
     <fieldset><legend>${t("qualiSchede")}</legend>
       <ul class="elenco check">${dellaMateria.map((s) => `<li><label><input type="checkbox" value="${esc(s.id)}" checked> ${esc(s.titolo)} <span class="meta">${esc(dataBreve(s.creata))}</span></label></li>`).join("")}</ul>
     </fieldset>
@@ -504,11 +567,14 @@ function vistaImpostazioni() {
 
     <h2>🧑‍🎓 ${t("profili")}</h2>
     <ul class="elenco">${io.profili.map((p) => `<li class="riga-profilo">
-      <span><strong>${esc(p.nome)}</strong> <span class="meta">${t("livello_" + p.livello)} · ${t("lingua_" + p.lingua)}</span></span>
+      <span><strong>${esc(p.nome)}</strong> <span class="meta">${SCUOLE[p.scuola] ? esc(SCUOLE[p.scuola].nome) + " · " : ""}${t("livello_" + p.livello)} · ${t("lingua_" + p.lingua)}</span></span>
       <span><button class="btn btn-ghost" data-modifica="${p.id}">${t("modifica")}</button><button class="btn btn-ghost pericolo" data-elimina-profilo="${p.id}" aria-label="${t("elimina")} ${esc(p.nome)}">🗑️</button></span>
     </li>`).join("")}</ul>
     <div id="form-profilo"></div>
-    <a class="btn btn-sec" href="#/profili">＋ ${t("aggiungiProfilo")}</a>
+    <div class="foto-azioni">
+      <a class="btn btn-sec" href="#/materie">📚 ${t("materieDi").replace("{nome}", esc(profiloCorrente().nome))}</a>
+      <a class="btn btn-sec" href="#/profili">＋ ${t("aggiungiProfilo")}</a>
+    </div>
 
     ${io.admin ? `<h2>🛠️ ${t("admin")}</h2><a class="btn btn-sec" href="#/admin">${t("apriAdmin")}${io.inAttesa ? ` · ${t("adminDaApprovare").replace("{n}", io.inAttesa)}` : ""}</a>` : ""}
 
@@ -552,6 +618,7 @@ function vistaImpostazioni() {
     if (mod) {
       const p = io.profili.find((x) => x.id === mod.dataset.modifica);
       $("#form-profilo").innerHTML = `<div class="riquadro">${campiProfilo(p)}<button class="btn btn-pri" id="salva-profilo">${t("salva")}</button></div>`;
+      collegaCampiProfilo();
       $("#salva-profilo").onclick = async () => {
         try {
           Object.assign(p, await api("PATCH", `/api/profili/${p.id}`, leggiCampiProfilo()));
@@ -575,6 +642,65 @@ function vistaImpostazioni() {
       } catch (e) {
         toast(e.message);
       }
+    }
+  };
+}
+
+// ---------- materie del profilo ----------
+function vistaMaterie() {
+  const p = profiloCorrente();
+  const proprie = p.materie ?? [];
+  const scuola = SCUOLE[p.scuola];
+  app.innerHTML = `<section class="pannello">
+    <h1>📚 ${t("materieDi").replace("{nome}", esc(p.nome))}</h1>
+    <p class="meta">${scuola ? `${esc(scuola.nome)} · ` : ""}${t("livello_" + p.livello)}</p>
+    ${proprie.length ? "" : `<p class="nota">${t("materieGeneriche")}</p>`}
+    <ul class="elenco">${proprie.map((m, i) => `<li class="riga-profilo">
+      <span>${esc(m.emoji)} <strong>${esc(m.nome)}</strong> <span class="meta">${t("materia_" + m.area)}</span></span>
+      <button class="btn btn-ghost pericolo" data-togli="${i}" aria-label="${t("rimuovi")} ${esc(m.nome)}">✕</button>
+    </li>`).join("")}</ul>
+
+    <h2>＋ ${t("nuovaMateria")}</h2>
+    <div class="riquadro">
+      <label class="campo" for="m-nome">${t("nomeMateria")}<input id="m-nome" maxlength="80" autocomplete="off" placeholder="${t("nomeMateriaEsempio")}"></label>
+      <label class="campo" for="m-area">${t("tipoMateria")}<select id="m-area">${opzioniArea()}</select></label>
+      <label class="campo" for="m-emoji">${t("emojiMateria")}<input id="m-emoji" maxlength="8" autocomplete="off" placeholder="🧪"></label>
+      <p class="nota">${t("notaTipoMateria")}</p>
+      <button class="btn btn-pri" id="m-aggiungi">${t("aggiungi")}</button>
+    </div>
+
+    <h2>🏫 ${t("daScuola")}</h2>
+    ${scuola
+      ? `<p class="nota">${t("daScuolaTesto").replace("{scuola}", esc(scuola.nome)).replace("{classe}", t("livello_" + p.livello))}</p>
+         <button class="btn btn-sec" id="m-proponi">${t("aggiungiMaterieScuola")}</button>`
+      : `<p class="nota">${t("daScuolaSenza")}</p><a class="btn btn-sec" href="#/impostazioni">${t("vaiImpostazioni")}</a>`}
+    <p><a class="link" href="#/nuova">← ${t("indietro")}</a></p>
+  </section>`;
+
+  const salva = async (materie, messaggio) => {
+    try {
+      Object.assign(p, await api("PATCH", `/api/profili/${p.id}`, { materie }));
+      toast(messaggio ?? t("salvato"));
+      vistaMaterie();
+    } catch (e) {
+      toast(e.message);
+    }
+  };
+  app.onclick = async (ev) => {
+    const via = ev.target.closest("[data-togli]");
+    if (via) return salva(proprie.filter((_, i) => i !== Number(via.dataset.togli)));
+    if (ev.target.closest("#m-aggiungi")) {
+      const nome = $("#m-nome").value.trim();
+      if (!nome) return toast(t("scriviNomeMateria"));
+      const area = $("#m-area").value;
+      const emoji = $("#m-emoji").value.trim() || ELENCO_MATERIE.find(([k]) => k === area)?.[1] || "📚";
+      return salva([...proprie, { id: slug(nome), nome, emoji, area }]);
+    }
+    if (ev.target.closest("#m-proponi")) {
+      const gia = new Set(proprie.map((m) => m.nome.toLowerCase()));
+      const nuove = materieProposte(p.scuola, p.livello).filter((m) => !gia.has(m.nome.toLowerCase()));
+      if (!nuove.length) return toast(t("nienteDaAggiungere"));
+      return salva([...proprie, ...nuove], t("materieAggiunte").replace("{n}", nuove.length));
     }
   };
 }
@@ -753,6 +879,7 @@ async function router() {
       case "archivio": return await vistaArchivio();
       case "ripasso": return await vistaRipasso();
       case "impostazioni": return vistaImpostazioni();
+      case "materie": return vistaMaterie();
       case "admin": return await vistaAdmin();
       default: return vistaNuova();
     }
