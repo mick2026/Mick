@@ -1,0 +1,50 @@
+/* Aggiunte per la versione claude.ai: caratteri, margini sicuri del telefono, pulsanti al posto dei link, foglio A4 per il PDF. */
+:root {
+  /* Atkinson Hyperlegible: progettato per la massima leggibilità (utile anche con DSA). */
+  --font: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-titoli: "Bricolage Grotesque", "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+body {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+.wrap { padding: 0; }
+h1, h2, .brand, .scheda-head h1 { font-family: var(--font-titoli); text-wrap: balance; letter-spacing: -0.01em; }
+.top { padding: 14px 0; }
+.tabbar button { display: flex; flex-direction: column; align-items: center; border: 0; background: none; color: var(--ink-soft);
+  font-size: .75rem; padding: 4px 10px; border-radius: 10px; cursor: pointer; }
+.tabbar button span:first-child { font-size: 1.3rem; }
+.tabbar button.attivo { color: var(--pri); background: var(--soft); font-weight: 600; }
+.tabbar { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.indice { top: env(safe-area-inset-top, 0px); }
+.indice button { white-space: nowrap; padding: 6px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line);
+  color: var(--ink); font-size: .9rem; cursor: pointer; }
+.elenco .voce { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 10px 4px; border: 0;
+  background: none; color: var(--ink); text-align: left; cursor: pointer; }
+.elenco .voce:hover .titolo { color: var(--pri); }
+.toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+.dialogo { position: fixed; inset: 0; background: rgba(10, 14, 22, .45); display: grid; place-items: center; z-index: 30; padding: 16px; }
+.dialogo > div { background: var(--card); color: var(--ink); border-radius: var(--radius); padding: 20px; max-width: 380px; width: 100%;
+  display: grid; gap: 16px; border: 1px solid var(--line); }
+.dialogo .azioni { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* Foglio A4 per il PDF: sempre chiaro, layout di stampa. */
+.fuori-schermo { position: fixed; left: -10000px; top: 0; }
+.foglio { width: 184mm; background: #fff; color: #000; font: 11pt/1.5 var(--font);
+  --bg: #fff; --card: #fff; --ink: #000; --ink-soft: #444; --soft: #F2F2F2; --line: #CCC; --pri: #2B4C7E;
+  --ok: #2E7D4F; --ok-bg: #E4F3EA; --no: #B3402E; --no-bg: #FBE9E5; }
+.foglio .no-print, .foglio details:not([open]), .foglio .traccia, .foglio .vf-fb { display: none !important; }
+.foglio .solo-stampa { display: block; }
+.foglio span.solo-stampa { display: inline; }
+.foglio .sez { border: 0; padding: 0; margin: 0 0 8mm; }
+.foglio .sez h2 { border-bottom: 1.5pt solid #000; padding-bottom: 2pt; }
+.foglio .spazio { height: 45mm; border: 1px dashed #BBB; border-radius: 6px; margin-top: 4mm;
+  background: repeating-linear-gradient(#fff 0 7.5mm, #DDD 7.5mm calc(7.5mm + 1px)); }
+.foglio .spazio.piccolo { height: 25mm; }
+.foglio .vf-lista { padding-left: 30px; }
+.foglio .chiave ol.semplice { list-style: none; padding: 0; font-size: 10pt; }
+.foglio .scheda-head h1 { font-size: 20pt; }
+.foglio summary { list-style: none; }
+.foglio summary::-webkit-details-marker { display: none; }

@@ -1,0 +1,150 @@
+import { test, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { setTimeout as attesa } from "node:timers/promises";
+
+const PORT = 18787;
+const BASE = `http://127.0.0.1:${PORT}`;
+const IMG = { mediaType: "image/jpeg", data: Buffer.from("finta").toString("base64") };
+let srv;
+
+before(async () => {
+  srv = spawn(process.execPath, ["server/index.js"], {
+    env: { ...process.env, DEMO: "1", AUTH: "dev", STORE: "memoria", PORT: String(PORT), LIMITE_PROVA: "2", NODE_ENV: "test" },
+    stdio: "ignore",
+  });
+  for (let i = 0; i < 50; i++) {
+    try { await fetch(`${BASE}/api/config`); return; } catch { await attesa(100); }
+  }
+});
+after(() => srv.kill());
+
+const chiama = async (metodo, p, body, token) => {
+  const r = await fetch(BASE + p, {
+    method: metodo,
+    headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: "Bearer " + token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return { status: r.status, dati: await r.json().catch(() => null) };
+};
+
+async function accedi(email) {
+  const { dati } = await chiama("POST", "/api/auth/codice", { email });
+  const s = await chiama("POST", "/api/auth/verifica", { email, codice: dati.codiceDiProva });
+  assert.equal(s.status, 200);
+  return s.dati.access_token;
+}
+
+async function famigliaPronta(email) {
+  const token = await accedi(email);
+  await chiama("POST", "/api/consenso", { genitore: true }, token);
+  const p = await chiama("POST", "/api/profili", { nome: "Tommaso", livello: "media2", lingua: "it" }, token);
+  return { token, profilo: p.dati.id };
+}
+
+test("serve la pagina con intestazioni di sicurezza", async () => {
+  const r = await fetch(BASE + "/");
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("content-security-policy"), /default-src 'self'/);
+});
+
+test("blocca il path traversal", async () => {
+  for (const p of ["/..%2fpackage.json", "/%2e%2e/server/index.js", "/../package.json"]) {
+    assert.notEqual((await fetch(BASE + p)).status, 200, p);
+  }
+});
+
+test("senza login le API private rispondono 401", async () => {
+  assert.equal((await chiama("GET", "/api/io")).status, 401);
+  assert.equal((await chiama("POST", "/api/scheda", { profilo: crypto.randomUUID(), immagini: [IMG] })).status, 401);
+  assert.equal((await chiama("GET", "/api/io", null, "token-finto")).status, 401);
+});
+
+test("codice sbagliato rifiutato", async () => {
+  await chiama("POST", "/api/auth/codice", { email: "a@prova.it" });
+  assert.equal((await chiama("POST", "/api/auth/verifica", { email: "a@prova.it", codice: "000000" })).status, 401);
+});
+
+test("serve il consenso del genitore prima di creare profili e schede", async () => {
+  const token = await accedi("consenso@prova.it");
+  const r = await chiama("POST", "/api/profili", { nome: "Ada" }, token);
+  assert.equal(r.status, 403);
+  assert.equal(r.dati.codice, "consenso");
+  assert.equal((await chiama("POST", "/api/consenso", { genitore: true }, token)).status, 200);
+  assert.equal((await chiama("POST", "/api/profili", { nome: "Ada" }, token)).status, 200);
+});
+
+test("scheda: 10 vero/falso, esercizi senza soluzione, salvata sul server", async () => {
+  const { token, profilo } = await famigliaPronta("scheda@prova.it");
+  const r = await chiama("POST", "/api/scheda", { profilo, materia: "scienze", energia: "poca", immagini: [IMG] }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.dati.vero_falso.length, 10);
+  for (const e of r.dati.esercizi) assert.deepEqual(Object.keys(e).sort(), ["consegna", "difficolta", "suggerimento"]);
+  const elenco = await chiama("GET", `/api/schede?profilo=${profilo}`, null, token);
+  assert.equal(elenco.dati.length, 1);
+  assert.equal(elenco.dati[0].riepilogo.inizio, "poca");
+});
+
+test("le famiglie non vedono né modificano i dati delle altre", async () => {
+  const a = await famigliaPronta("a1@prova.it");
+  const b = await famigliaPronta("b1@prova.it");
+  const s = (await chiama("POST", "/api/scheda", { profilo: a.profilo, materia: "storia", immagini: [IMG] }, a.token)).dati;
+  assert.equal((await chiama("GET", `/api/schede/${s.id}`, null, b.token)).status, 404);
+  assert.equal((await chiama("PATCH", `/api/schede/${s.id}`, { test: [] }, b.token)).status, 404);
+  assert.equal((await chiama("GET", `/api/schede?profilo=${a.profilo}`, null, b.token)).dati.length, 0);
+  assert.equal((await chiama("POST", "/api/scheda", { profilo: a.profilo, immagini: [IMG] }, b.token)).status, 404);
+  assert.equal((await chiama("POST", "/api/verifica-tentativo", { scheda: s.id, esercizio: 0, immagini: [IMG] }, b.token)).status, 404);
+  await chiama("DELETE", `/api/schede/${s.id}`, {}, b.token);
+  assert.equal((await chiama("GET", `/api/schede/${s.id}`, null, a.token)).status, 200);
+});
+
+test("il telefono non può scrivere esiti o soluzioni; il server sì dopo il tentativo", async () => {
+  const { token, profilo } = await famigliaPronta("esiti@prova.it");
+  const s = (await chiama("POST", "/api/scheda", { profilo, materia: "matematica", immagini: [IMG] }, token)).dati;
+  const p = await chiama("PATCH", `/api/schede/${s.id}`, { esiti: { 0: { soluzione_guidata: "x" } }, test: [{ ok: 7, tot: 10 }] }, token);
+  assert.deepEqual(p.dati.esiti, {});
+  assert.equal(p.dati.test[0].ok, 7);
+  const v = await chiama("POST", "/api/verifica-tentativo", { scheda: s.id, esercizio: 0, immagini: [IMG] }, token);
+  assert.equal(v.status, 200);
+  assert.ok(v.dati.esiti[0].soluzione_guidata);
+});
+
+test("limite mensile di schede (prova = 2)", async () => {
+  const { token, profilo } = await famigliaPronta("limite@prova.it");
+  for (let i = 0; i < 2; i++) assert.equal((await chiama("POST", "/api/scheda", { profilo, immagini: [IMG] }, token)).status, 200);
+  const r = await chiama("POST", "/api/scheda", { profilo, immagini: [IMG] }, token);
+  assert.equal(r.status, 402);
+  assert.equal(r.dati.codice, "limite");
+  const io = await chiama("GET", "/api/io", null, token);
+  assert.equal(io.dati.utilizzo.schede, 2);
+  assert.equal(io.dati.utilizzo.limiteSchede, 2);
+});
+
+test("esportazione ed eliminazione dell'account", async () => {
+  const { token, profilo } = await famigliaPronta("elimina@prova.it");
+  await chiama("POST", "/api/scheda", { profilo, immagini: [IMG] }, token);
+  const e = await chiama("GET", "/api/esporta", null, token);
+  assert.equal(e.dati.schede.length, 1);
+  assert.equal((await chiama("DELETE", "/api/account", { conferma: "no" }, token)).status, 400);
+  assert.equal((await chiama("DELETE", "/api/account", { conferma: "ELIMINA" }, token)).status, 200);
+  assert.equal((await chiama("GET", "/api/io", null, token)).status, 401);
+});
+
+test("rifiuta input non validi", async () => {
+  const { token, profilo } = await famigliaPronta("input@prova.it");
+  assert.equal((await chiama("POST", "/api/scheda", { profilo, immagini: [] }, token)).status, 400);
+  assert.equal((await chiama("POST", "/api/scheda", { profilo, immagini: [{ mediaType: "text/html", data: "AAAA" }] }, token)).status, 400);
+  assert.equal((await chiama("POST", "/api/profili", { nome: "   " }, token)).status, 400);
+  assert.equal((await chiama("GET", "/api/schede/non-un-uuid", null, token)).status, 400);
+  assert.equal((await chiama("POST", "/api/auth/codice", { email: "non-email" })).status, 400);
+});
+
+test("in produzione non parte con login finto o senza chiavi", async () => {
+  const p = spawn(process.execPath, ["server/index.js"], { env: { ...process.env, NODE_ENV: "production", PORT: "18788", ANTHROPIC_API_KEY: "" } });
+  let err = "";
+  p.stderr.on("data", (d) => (err += d));
+  const codice = await new Promise((ok) => p.on("exit", ok));
+  assert.equal(codice, 1);
+  assert.match(err, /AUTH=supabase/);
+  assert.match(err, /ANTHROPIC_API_KEY/);
+});

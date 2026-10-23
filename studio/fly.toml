@@ -1,0 +1,27 @@
+# Configurazione per Fly.io (alternativa a Render). Vedi docs/DEPLOY.md.
+app = "studio-amico"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  TRUST_PROXY = "1"
+  PORT = "8080"
+  LIMITE_PROVA = "5"
+  LIMITE_ABBONATO = "40"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/salute"
+    timeout = "5s"
