@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rieti e Roma con Emma</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una colonna da taccuino di viaggio; in alto "adesso", poi giorni a schede, biglietti, cose da fare, contatti, e la casella per chiedere. */
+:root{
+  --bg:#eef0ec; --surface:#fbfbf9; --ink:#1d2330; --muted:#5d6472; --line:#d7dad3;
+  --accent:#8a1f3d; --accent-soft:#f3e3e8; --gold:#9a7424; --warn:#a2560e; --warn-soft:#fbeedd; --ok:#2f6b47;
+  --mA:#d4621a; --mB:#2a5cae; --bus:#2f7d4f;
+  --f-display:"Cinzel","Trajan Pro",Georgia,serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14171d; --surface:#1c2028; --ink:#e7e9ee; --muted:#a2a8b4; --line:#2e3440;
+  --accent:#e2789a; --accent-soft:#3a1f29; --gold:#d6b166; --warn:#f0a35c; --warn-soft:#3a2a17; --ok:#7cc79a;
+  --mA:#f08a45; --mB:#78a3f2; --bus:#6cc28f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171d; --surface:#1c2028; --ink:#e7e9ee; --muted:#a2a8b4; --line:#2e3440;
+  --accent:#e2789a; --accent-soft:#3a1f29; --gold:#d6b166; --warn:#f0a35c; --warn-soft:#3a2a17; --ok:#7cc79a;
+  --mA:#f08a45; --mB:#78a3f2; --bus:#6cc28f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body)}
+.wrap{max-width:760px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1{font:700 clamp(26px,6vw,36px)/1.1 var(--f-display);letter-spacing:.04em;margin:0;text-wrap:balance}
+h2{font:700 15px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;margin:0 0 12px;color:var(--accent)}
+.sub{color:var(--muted);margin:6px 0 0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+/* adesso */
+.now{display:grid;gap:6px;border-left:4px solid var(--accent)}
+.now .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.now .what{font-size:19px;font-weight:600}
+.now .when{color:var(--accent);font-weight:500}
+/* tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tab{font:500 14px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.place{font-size:13px;color:var(--muted);margin:0 0 10px}
+ol.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.ev{display:grid;grid-template-columns:62px 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.ev:first-child{border-top:0}
+.ev .t{font-family:var(--f-mono);font-size:14px;color:var(--muted);padding-top:1px}
+.ev .b{min-width:0}
+.ev .ti{font-weight:600}
+.ev .w{font-size:13.5px;color:var(--muted)}
+.ev .n{font-size:13.5px;margin-top:3px}
+.ev.past{opacity:.55}
+.ev.cur .t{color:var(--accent);font-weight:600}
+.ev.cur .ti::before{content:"In corso · ";color:var(--accent)}
+.tag{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:4px;margin-right:6px;vertical-align:2px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.tag.treno,.tag.navetta{color:var(--accent);border-color:var(--accent)}
+.warn{background:var(--warn-soft);color:var(--warn);border-radius:6px;padding:6px 9px;font-size:13.5px;margin-top:6px}
+.note-day{font-size:13.5px;color:var(--muted);margin-top:10px}
+/* biglietti */
+.tix{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.tk{display:flex;flex-direction:column;gap:8px}
+.tk .route{font-weight:600}
+.tk dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:14px}
+.tk dt{color:var(--muted)}
+.tk dd{margin:0;font-family:var(--f-mono)}
+.pin{border:0;background:none;color:var(--accent);font:inherit;cursor:pointer;padding:0;text-decoration:underline}
+/* checklist */
+.chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.chk label{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:8px 0;cursor:pointer;align-items:start}
+.chk input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent)}
+.chk .done{text-decoration:line-through;color:var(--muted)}
+/* contatti */
+.ct{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.ct .card{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px}
+.ct .nm{font-size:13px;color:var(--muted)}
+.ct .num{font-family:var(--f-mono);user-select:all}
+.btn{font:500 13px var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn:disabled{opacity:.5;cursor:default}
+/* chiedi */
+.ask{display:flex;flex-direction:column;gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips .btn{white-space:normal;text-align:left}
+.log{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto}
+.msg{padding:10px 12px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.u{background:var(--accent-soft);align-self:flex-end;max-width:85%}
+.msg.a{background:var(--bg);border:1px solid var(--line)}
+.row{display:flex;gap:8px}
+.row textarea{flex:1;min-width:0;resize:vertical;min-height:44px;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+/* mappe */
+.mapcard{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.maphead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.maphead h3{font:600 15px var(--f-body);margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend svg{flex:none}
+.mapwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.mapwrap svg{display:block;width:100%;min-width:560px;height:auto}
+.mapwrap text{font-family:var(--f-body)}
+.legs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.leg{display:grid;grid-template-columns:26px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.leg:first-child{border-top:0}
+.leg .nb{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--surface);font:600 12px/22px var(--f-mono);text-align:center}
+.leg .nb.off{background:var(--muted)}
+.leg .b{min-width:0;display:flex;flex-direction:column;gap:3px}
+.leg .h{font-weight:600}
+.leg .h .mono{color:var(--muted);font-weight:500;margin-right:6px}
+.leg .m,.leg .alt{font-size:13.5px}
+.leg .alt{color:var(--muted)}
+.leg .alt b{color:var(--ink);font-weight:600}
+.leg .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.leg .links a{font-size:13px;color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.leg .links a:hover{border-color:var(--accent)}
+.mapnote{font-size:13px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:no-preference){.tab,.btn{transition:background .15s,color .15s}}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Rieti e Roma con Emma</h1>
+    <p class="sub">Finale del Campionato Nazionale di Disegno Tecnico, poi due giorni a Roma · 23–26 ottobre 2026</p>
+  </header>
+
+  <section class="card now" aria-live="polite">
+    <span class="lbl" id="nowLbl">Prossimo</span>
+    <span class="what" id="nowWhat">Caricamento…</span>
+    <span class="when" id="nowWhen"></span>
+    <span class="w" id="nowWhere" style="color:var(--muted);font-size:14px"></span>
+  </section>
+
+  <section aria-labelledby="hProg">
+    <h2 id="hProg">Programma</h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="card" id="day"></div>
+    <div class="card mapcard" id="map"></div>
+  </section>
+
+  <section aria-labelledby="hAsk" id="askSec">
+    <h2 id="hAsk">Chiedi</h2>
+    <div class="card ask">
+      <p class="hint" id="askHint">Domande veloci sul viaggio: orari, posti, indirizzi, cosa fare dopo. Le risposte usano i dati di questa pagina.</p>
+      <div class="chips" id="chips"></div>
+      <div class="log" id="log"></div>
+      <form class="row" id="askForm">
+        <label for="q" class="hint" style="position:absolute;left:-9999px">Domanda</label>
+        <textarea id="q" rows="1" placeholder="Es. Che posti abbiamo sul treno di lunedì?"></textarea>
+        <button class="btn primary" id="send" type="submit">Chiedi</button>
+        <button class="btn" id="stop" type="button" hidden>Ferma</button>
+      </form>
+    </div>
+  </section>
+
+  <section aria-labelledby="hTodo">
+    <h2 id="hTodo">Da fare</h2>
+    <div class="card"><ul class="chk" id="chk"></ul></div>
+  </section>
+
+  <section aria-labelledby="hTix">
+    <h2 id="hTix">Biglietti e alloggi</h2>
+    <div class="tix" id="tix"></div>
+  </section>
+
+  <section aria-labelledby="hCt">
+    <h2 id="hCt">Contatti</h2>
+    <div class="ct" id="ct"></div>
+  </section>
+</div>
+
+<script>
+const S="+02:00", W="+01:00"; // ora legale fino alle 03:00 del 25/10, poi ora solare
+const DAYS=[
+ {id:"ven",label:"Ven 23",place:"La Spezia → Roma → Rieti",tz:S,ev:[
+  ["06:51","10:10","treno","Frecciargento 8583 · La Spezia → Roma Termini","Carrozza 7 · posti 1D (Michele), 1B (Emma)"],
+  ["10:10","12:30","libero","Attesa a Roma Termini","Circa due ore: colazione, aspettare il messaggio di Fabio sul punto d'incontro"],
+  ["12:30","14:00","navetta","Navetta Termini → Rieti","Punto d'incontro comunicato dall'organizzazione · referente Fabio Macchi"],
+  ["14:00","17:00","hotel","Sistemazione all'Hotel Europa, Rieti","Camera doppia, a carico dell'organizzazione"],
+  ["17:00","18:00","evento","Presentazione del romanzo «Il punto fermo»","Chiesa di San Domenico, Via Giordano Bruno 2"],
+  ["18:00","20:00","evento","Cerimonia inaugurale della finale","Chiesa di San Domenico · diretta YouTube"],
+  ["20:00","22:00","pasto","Apericena da Checco al Calice d'Oro","Via Marchetti 10"]]},
+ {id:"sab",label:"Sab 24",place:"Rieti · giorno della prova",tz:S,ev:[
+  ["08:30","08:40","evento","Registrazione di Emma","Palestra del Liceo Scientifico Carlo Jucci"],
+  ["09:00","10:00","evento","Prova finale di Emma","Michele: tempo libero, mostra «Geometrie del territorio» al Palazzo Vescovile, Via Cintia 108"],
+  ["10:30","12:30","visita","Passeggiata alla scoperta di Rieti","Con i ragazzi del servizio civile dell'ufficio turistico"],
+  ["12:30","16:30","libero","Pranzo libero","Facoltativa alle 13:30: Rieti sotterranea, 8 € a testa"],
+  ["16:30","18:00","evento","Il rischio sismico in Italia + tavola vibrante","Chiesa di San Domenico"],
+  ["18:00","19:30","evento","Cerimonia di premiazione","Chiesa di San Domenico · diretta YouTube"],
+  ["19:30","22:00","pasto","Apericena da Checco al Calice d'Oro","Via Marchetti 10"]],
+  note:"Stanotte finisce l'ora legale: alle 03:00 gli orologi tornano alle 02:00. Un'ora di sonno in più."},
+ {id:"dom",label:"Dom 25",place:"Rieti → Roma · San Pietro e il centro",tz:W,ev:[
+  ["08:30","09:15","hotel","Check-out dall'Hotel Europa","A piedi fino alla stazione ferroviaria di Rieti"],
+  ["09:20","11:30","navetta","Navetta Rieti stazione → Roma Termini","Partenza per gli ospiti di Hotel Europa e Miramonti · arrivo previsto 11:30"],
+  ["11:30","12:05","trasporto","A piedi da Termini all'Hotel Globus, bagagli in reception","Circa 2 km, 30–35 minuti con le valigie: Viale Pretoriano, Policlinico, Viale Ippocrate. Il check-in vero si fa la sera"],
+  ["12:05","13:05","trasporto","Con i mezzi dall'hotel alla Fraschetta","A piedi alla metro Bologna, metro B fino a Termini, cambio con la metro A fino a Ottaviano, poi 15 minuti a piedi passando da Piazza San Pietro"],
+  ["13:15","14:45","pasto","Pranzo alla Fraschetta di Castel Sant'Angelo","Via del Banco di Santo Spirito 20 · 06 6830 7661 · 10 minuti a piedi da Piazza San Pietro","La domenica è aperta solo a pranzo (12–15/16). Una recensione dice che la domenica non prendono prenotazioni: telefonate comunque, e se non prenotano arrivate presto, l'attesa può essere di mezz'ora."],
+  ["14:45","16:30","visita","Piazza San Pietro e Basilica","Ingresso gratuito, coda per i controlli. Spalle e ginocchia coperte. Cupola facoltativa, a pagamento"],
+  ["16:30","19:30","visita","A piedi: Castel Sant'Angelo → Piazza Navona → Pantheon → Fontana di Trevi","Circa 35 minuti di cammino in tutto, con soste. Il sole tramonta verso le 17:10"],
+  ["19:30","21:15","pasto","Cena libera in zona Pantheon / Trevi","Molte trattorie in zona; di domenica sera conviene prenotare o arrivare presto"],
+  ["21:15","22:00","hotel","Rientro con i mezzi all'Hotel Globus e check-in","Da Trevi a piedi alla metro A Barberini, fino a Termini, poi metro B fino a Bologna. Circa 35 minuti","La metro la domenica sera chiude verso le 23:30."]]},
+ {id:"lun",label:"Lun 26",place:"Roma antica · rientro a casa",tz:W,ev:[
+  ["08:00","09:00","hotel","Colazione inclusa all'Hotel Globus","Tassa di soggiorno 12 €, solo carta"],
+  ["09:00","09:05","hotel","Check-out dall'Hotel Globus","Si parte con le valigie"],
+  ["09:05","09:40","trasporto","A piedi a Termini e bagagli al deposito KiPoint","Circa 2 km, 30–35 minuti. KiPoint al piano terra, lato Via Giolitti, altezza binario 24 · aperto 7–21, circa 10 € a bagaglio"],
+  ["09:45","10:10","visita","A piedi da Termini a San Pietro in Vincoli, passando da Santa Maria Maggiore","Circa 1,5 km, 20–25 minuti lungo Via Cavour"],
+  ["10:10","10:30","visita","San Pietro in Vincoli: il Mosè di Michelangelo","Ingresso gratuito. Orari da verificare: di solito chiude a metà giornata"],
+  ["10:30","11:15","visita","Colosseo da fuori e Arco di Costantino","5 minuti a piedi da San Pietro in Vincoli. Il giro completo intorno al Colosseo è di circa 500 m"],
+  ["11:15","12:00","visita","Via dei Fori Imperiali","I Fori Imperiali e i Mercati di Traiano si vedono bene dalla strada, senza biglietto"],
+  ["12:00","12:45","visita","Campidoglio, Piazza Venezia, Altare della Patria","Dalla terrazza dietro il Campidoglio si vede tutto il Foro Romano dall'alto, gratis"],
+  ["12:45","14:15","pasto","Pranzo nel rione Monti","Zona Via dei Serpenti / Piazza della Madonna dei Monti, 10 minuti a piedi da Piazza Venezia"],
+  ["14:15","14:45","libero","Tempo libero a Monti","Botteghe e piazzette del rione"],
+  ["14:45","15:15","visita","A piedi da Monti a Termini","Circa 1,3 km, 15–20 minuti: Via Cavour, Santa Maria Maggiore","Se siete in ritardo, metro B da Cavour a Termini, 1 fermata."],
+  ["15:15","15:40","trasporto","Ritiro bagagli al KiPoint e al binario","Il binario compare sul tabellone circa 15–20 minuti prima","Il treno parte alle 16:15 e le porte chiudono 1 minuto prima."],
+  ["16:15","19:25","treno","Frecciarossa 8556 · Roma Termini → La Spezia","Carrozza 6 · posti 11A (Michele), 10A (Emma)"]]}
+];
+const DATES={ven:"2026-10-23",sab:"2026-10-24",dom:"2026-10-25",lun:"2026-10-26"};
+const ALL=[];
+DAYS.forEach(d=>d.ev.forEach(e=>{
+  ALL.push({day:d.id,dayLabel:d.label,start:new Date(`${DATES[d.id]}T${e[0]}:00${d.tz}`),end:new Date(`${DATES[d.id]}T${e[1]}:00${d.tz}`),s:e[0],e:e[1],tag:e[2],title:e[3],where:e[4],warn:e[5]||""});
+}));
+
+const TIX=[
+ {route:"Andata · La Spezia → Roma Termini",when:"Ven 23/10 · 06:51 → 10:10",rows:[["Treno","Frecciargento 8583"],["Carrozza","7"],["Posti","1D Michele · 1B Emma"]],note:"Super Economy: non modificabile né rimborsabile"},
+ {route:"Ritorno · Roma Termini → La Spezia",when:"Lun 26/10 · 16:15 → 19:25",rows:[["Treno","Frecciarossa 8556"],["Carrozza","6"],["Posti","11A Michele · 10A Emma"]],note:"FrecciaDays: non modificabile né rimborsabile"},
+ {route:"Hotel Europa · Rieti",when:"Ven 23 → Dom 25",rows:[["Camera","Doppia"],["Costi","Organizzazione: notti, colazione, apericena"],["Navette","Andata 12:30 da Termini · ritorno 09:20 dalla stazione di Rieti"]],note:"Referente: Fabio Macchi"},
+ {route:"Best Western Plus Hotel Globus · Roma",when:"Dom 25 dalle 14:00 → Lun 26 entro le 10:00",rows:[["Indirizzo","Viale Ippocrate 119"],["Camera","Matrimoniale Economy, colazione inclusa"],["Da pagare","Tassa di soggiorno 12 €, solo carta"]],note:"187,50 € addebitati da Booking. Non più cancellabile gratis. Domenica bagagli in reception dalle 11:45; lunedì si parte con le valigie verso il deposito di Termini."},
+ {route:"Deposito bagagli KiPoint · Roma Termini",when:"Lun 26 · 09:40 → 15:15",rows:[["Dove","Piano terra, lato Via Giolitti, altezza binario 24"],["Orari","07:00–21:00"],["Prezzo","Circa 10 € a bagaglio per 24 ore"],["Prenotazione","kibag.it oppure 06 89014069"]],note:"Prezzo da confermare: alcune fonti indicano 19 €."}
+];
+const TODO=[
+ ["fraschetta","Chiamare la Fraschetta (06 6830 7661) e prenotare per 2 domenica alle 13:15 (la domenica sono aperti solo a pranzo)."],
+ ["navetta","Aspettare da Fabio il punto d'incontro per la navetta delle 12:30."],
+ ["globus","Hotel Globus: la prenotazione non è a nostro nome. Avere la conferma a portata di mano ed eventualmente una delega."],
+ ["bagagli","Telefonare al Globus (06 4457001): lasciamo i bagagli domenica verso le 11:45 e il check-in sarà verso le 22."],
+ ["kipoint","Facoltativo: prenotare il deposito KiPoint di Termini per lunedì dalle 9:40 alle 15:15 (kibag.it)."],
+ ["vestiti","Domenica: spalle e ginocchia coperte per entrare in Basilica."],
+ ["ora","Sabato notte: controllare che sveglie e orologi passino all'ora solare."]
+];
+const CONTACTS=[
+ ["Hotel Globus · Roma","+39 06 4457001"],
+ ["La Fraschetta di Castel Sant'Angelo","+39 06 6830 7661"],
+ ["Emergenze","112"]
+];
+
+/* ---- Mappe: posizioni indicative, disegnate in scala ---- */
+// id: [lat, lon, nome, indirizzo per Google Maps, tipo (p luogo | s fermata | h nascosto), posizione etichetta (r l t b)]
+const P={
+ rStaz:[42.4094,12.8554,"Stazione di Rieti","Stazione di Rieti","p","t"],
+ rEuropa:[42.4036,12.8590,"Hotel Europa","Hotel Europa, Via San Rufo 41, Rieti","p","r"],
+ rSanDom:[42.4058,12.8630,"San Domenico","Chiesa di San Domenico, Via Giordano Bruno, Rieti","p","r"],
+ rChecco:[42.4060,12.8563,"Checco al Calice d'Oro","Ristorante Da Checco al Calice d'Oro, Via Marchetti 10, Rieti","p","t"],
+ rJucci:[42.4020,12.8582,"Liceo Jucci","Piazza San Francesco, Rieti","p","l"],
+ rVesc:[42.4029,12.8614,"Palazzo Vescovile","Palazzo Vescovile, Via Cintia 108, Rieti","p","r"],
+ termini:[41.9010,12.5016,"Termini","Roma Termini","s","b"],
+ globus:[41.9095,12.5225,"Hotel Globus","Best Western Plus Hotel Globus, Viale Ippocrate 119, Roma","p","r"],
+ bologna:[41.9132,12.5206,"Bologna","Stazione metro Bologna, Roma","s","t"],
+ castro:[41.9061,12.5089,"Castro Pretorio","","h"],
+ policlinico:[41.9078,12.5128,"Policlinico","","h"],
+ repubblica:[41.9024,12.4964,"Repubblica","","h"],
+ barberini:[41.9037,12.4887,"Barberini","Stazione metro Barberini, Roma","s","r"],
+ spagna:[41.9065,12.4826,"Spagna","","h"],
+ flaminio:[41.9118,12.4762,"Flaminio","","h"],
+ lepanto:[41.9128,12.4672,"Lepanto","","h"],
+ ottaviano:[41.9094,12.4583,"Ottaviano","Stazione metro Ottaviano, Roma","s","t"],
+ sanpietro:[41.9022,12.4568,"San Pietro","Piazza San Pietro, Città del Vaticano","p","l"],
+ castel:[41.9031,12.4663,"Castel Sant'Angelo","Castel Sant'Angelo, Roma","p","t"],
+ fraschetta:[41.8995,12.4680,"Fraschetta","La Fraschetta di Castel Sant'Angelo, Via del Banco di Santo Spirito 20, Roma","p","l"],
+ navona:[41.8992,12.4731,"Navona","Piazza Navona, Roma","p","t"],
+ pantheon:[41.8986,12.4769,"Pantheon","Pantheon, Roma","p","b"],
+ argentina:[41.8955,12.4765,"Largo Argentina","Largo di Torre Argentina, Roma","s","b"],
+ trevi:[41.9009,12.4833,"Trevi","Fontana di Trevi, Roma","p","t"],
+ smm:[41.8976,12.4984,"S. Maria Maggiore","Basilica di Santa Maria Maggiore, Roma","p","r"],
+ cavour:[41.8945,12.4935,"Cavour","Stazione metro Cavour, Roma","s","t"],
+ monti:[41.8955,12.4915,"Monti","Piazza della Madonna dei Monti, Roma","p","l"],
+ colosseo:[41.8902,12.4922,"Colosseo","Colosseo, Roma","p","b"],
+ foro:[41.8925,12.4853,"Foro Romano","Foro Romano, Roma","p","b"],
+ foriimp:[41.8937,12.4872,"Fori Imperiali","Via dei Fori Imperiali, Roma","p","b"],
+ vincoli:[41.8937,12.4930,"S. Pietro in Vincoli","Basilica di San Pietro in Vincoli, Roma","p","r"],
+ campidoglio:[41.8933,12.4828,"Campidoglio","Piazza del Campidoglio, Roma","p","l"],
+ venezia:[41.8960,12.4826,"Piazza Venezia","Piazza Venezia, Roma","p","r"]
+};
+const MB=["termini","castro","policlinico","bologna"], MA=["termini","repubblica","barberini","spagna","flaminio","lepanto","ottaviano"];
+const rev=a=>a.slice().reverse();
+const MAPS={
+ ven:{title:"Rieti, centro storico",note:"Termini → Rieti in navetta (circa 80 km). In centro a Rieti tutto è a 5–10 minuti a piedi: i bus urbani non servono.",legs:[
+  {t:"17:00",from:"rEuropa",to:"rSanDom",main:"A piedi, circa 6 minuti",segs:[["w",["rEuropa","rSanDom"]]]},
+  {t:"20:00",from:"rSanDom",to:"rChecco",main:"A piedi, circa 8 minuti",segs:[["w",["rSanDom","rChecco"]]]},
+  {t:"22:00",from:"rChecco",to:"rEuropa",main:"A piedi, circa 6 minuti",segs:[["w",["rChecco","rEuropa"]]]}]},
+ sab:{title:"Rieti, giorno della prova",note:"Tutto a piedi in centro. Le posizioni della palestra e degli edifici sono indicative: la palestra potrebbe non essere nella sede di Piazza San Francesco, chiedete all'organizzazione.",legs:[
+  {t:"08:20",from:"rEuropa",to:"rJucci",main:"A piedi, circa 5 minuti",segs:[["w",["rEuropa","rJucci"]]]},
+  {t:"09:00",from:"rJucci",to:"rVesc",main:"Michele, a piedi circa 5 minuti, per la mostra",segs:[["w",["rJucci","rVesc"]]]},
+  {t:"16:30",from:"rVesc",to:"rSanDom",main:"A piedi, circa 6 minuti",segs:[["w",["rVesc","rSanDom"]]]},
+  {t:"19:30",from:"rSanDom",to:"rChecco",main:"A piedi, circa 8 minuti",segs:[["w",["rSanDom","rChecco"]]]},
+  {t:"22:00",from:"rChecco",to:"rEuropa",main:"A piedi, circa 6 minuti",segs:[["w",["rChecco","rEuropa"]]]}]},
+ dom:{title:"Roma, domenica",note:"Il tratto Hotel Europa → stazione di Rieti (a piedi, circa 10 minuti, navetta alle 9:20) non è sulla mappa.",legs:[
+  {t:"09:05",from:"rEuropa",to:"rStaz",off:true,main:"Rieti: a piedi, circa 10 minuti",segs:[]},
+  {t:"11:30",from:"termini",to:"globus",main:"A piedi con le valigie, circa 2 km, 30–35 minuti",segs:[["w",["termini","castro","policlinico","globus"]]],
+   alt:{text:"Metro B da Termini a Bologna (3 fermate), poi 8 minuti a piedi",segs:[["B",MB],["w",["bologna","globus"]]]}},
+  {t:"12:05",from:"globus",to:"fraschetta",main:"A piedi alla metro Bologna, metro B fino a Termini, metro A fino a Ottaviano, poi a piedi passando da Piazza San Pietro. Circa 1 ora",segs:[["w",["globus","bologna"]],["B",rev(MB)],["A",MA],["w",["ottaviano","sanpietro","fraschetta"]]],
+   alt:{text:"Da Termini bus 40 fino a Piazza Pia (Castel Sant'Angelo), poi 5 minuti a piedi. Di domenica c'è poco traffico",segs:[["bus",["termini","venezia","argentina","castel"]]]}},
+  {t:"14:45",from:"fraschetta",to:"sanpietro",main:"A piedi lungo Via della Conciliazione, circa 15 minuti",segs:[["w",["fraschetta","castel","sanpietro"]]]},
+  {t:"16:30",from:"sanpietro",to:"trevi",main:"A piedi: Castel Sant'Angelo, Piazza Navona, Pantheon, Fontana di Trevi. Circa 3 km, 45 minuti di cammino più le soste",bf:.8,segs:[["w",["sanpietro","castel","navona","pantheon","trevi"]]],
+   alt:{text:"Bus 40 da Piazza Pia a Largo Argentina, poi a piedi Pantheon e Trevi",segs:[["bus",["castel","argentina"]]]}},
+  {t:"21:15",from:"trevi",to:"globus",main:"A piedi alla metro Barberini, metro A fino a Termini, metro B fino a Bologna, poi a piedi. Circa 35 minuti",segs:[["w",["trevi","barberini"]],["A",["barberini","repubblica","termini"]],["B",MB],["w",["bologna","globus"]]],
+   alt:{text:"Tutto a piedi: circa 3,5 km, 45 minuti, passando da Termini",segs:[["w",["trevi","repubblica","termini","castro","policlinico","globus"]]]}}]},
+ lun:{title:"Roma, lunedì",note:"Colosseo e Fori visti da fuori, senza biglietto. Dalla terrazza del Campidoglio si vede il Foro Romano dall'alto.",legs:[
+  {t:"09:05",from:"globus",to:"termini",main:"A piedi con le valigie, circa 2 km, 30–35 minuti. Bagagli al KiPoint (binario 24)",segs:[["w",["globus","policlinico","castro","termini"]]],
+   alt:{text:"A piedi fino alla metro Bologna, poi metro B fino a Termini (3 fermate)",segs:[["w",["globus","bologna"]],["B",rev(MB)]]}},
+  {t:"09:45",from:"termini",to:"vincoli",main:"A piedi passando da Santa Maria Maggiore e Via Cavour, circa 1,5 km, 20–25 minuti",segs:[["w",["termini","smm","cavour","vincoli"]]],
+   alt:{text:"Metro B da Termini a Cavour (1 fermata), poi 5 minuti a piedi in salita",segs:[["B",["termini","cavour"]]]}},
+  {t:"10:30",from:"vincoli",to:"colosseo",main:"A piedi, circa 5 minuti in discesa",segs:[["w",["vincoli","colosseo"]]]},
+  {t:"11:15",from:"colosseo",to:"venezia",main:"A piedi lungo Via dei Fori Imperiali, poi su al Campidoglio e giù a Piazza Venezia. Circa 1,2 km",segs:[["w",["colosseo","foriimp","campidoglio","venezia"]]]},
+  {t:"12:45",from:"venezia",to:"monti",main:"A piedi per pranzo, circa 10 minuti",segs:[["w",["venezia","monti"]]]},
+  {t:"14:45",from:"monti",to:"termini",main:"A piedi per Via Cavour e Santa Maria Maggiore, circa 1,3 km, 15–20 minuti",segs:[["w",["monti","cavour","smm","termini"]]],
+   alt:{text:"Metro B da Cavour a Termini (1 fermata)",segs:[["B",["cavour","termini"]]]}}]}
+};
+const COL={w:"var(--accent)",A:"var(--mA)",B:"var(--mB)",bus:"var(--bus)"};
+const MODE={w:"A piedi",A:"Metro A",B:"Metro B",bus:"Bus"};
+function gmaps(a,b,mode){return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(P[a][3])}&destination=${encodeURIComponent(P[b][3])}&travelmode=${mode}`}
+function renderMap(id){
+  const m=MAPS[id], box=document.getElementById("map"), NS="http://www.w3.org/2000/svg";
+  box.innerHTML="";
+  const head=document.createElement("div"); head.className="maphead";
+  head.innerHTML=`<h3></h3><div class="legend"></div>`; head.querySelector("h3").textContent="Mappa · "+m.title;
+  const used=new Set(); m.legs.forEach(l=>[...l.segs,...(l.alt?l.alt.segs:[])].forEach(s=>s[1].forEach(p=>used.add(p))));
+  const modes=new Set(); let hasAlt=false;
+  m.legs.forEach(l=>{l.segs.forEach(s=>modes.add(s[0])); if(l.alt){hasAlt=true; l.alt.segs.forEach(s=>modes.add(s[0]))}});
+  const lg=head.querySelector(".legend");
+  const sw=(col,dash)=>`<svg width="26" height="8" aria-hidden="true"><line x1="1" y1="4" x2="25" y2="4" stroke="${col}" stroke-width="4" stroke-linecap="round" ${dash?'stroke-dasharray="2 5"':""}/></svg>`;
+  ["w","A","B","bus"].filter(k=>modes.has(k)).forEach(k=>{const s=document.createElement("span");s.innerHTML=sw(COL[k],false);s.append(MODE[k]);lg.append(s)});
+  if(hasAlt){const s=document.createElement("span");s.innerHTML=sw("var(--muted)",true);s.append("Alternativa");lg.append(s)}
+  box.append(head);
+  // proiezione
+  const ids=[...used], lats=ids.map(i=>P[i][0]), lons=ids.map(i=>P[i][1]);
+  const lat0=(Math.min(...lats)+Math.max(...lats))/2, cx=Math.cos(lat0*Math.PI/180);
+  const minX=Math.min(...lons)*cx, maxX=Math.max(...lons)*cx, minY=-Math.max(...lats), maxY=-Math.min(...lats);
+  const W=680, pad={l:130,r:120,t:44,b:46}, innerW=W-pad.l-pad.r;
+  let k=innerW/(maxX-minX||1e-4); const maxH=380; if((maxY-minY)*k>maxH) k=maxH/(maxY-minY);
+  const H=Math.round((maxY-minY)*k+pad.t+pad.b), offX=pad.l+(innerW-(maxX-minX)*k)/2;
+  const xy=i=>[offX+(P[i][1]*cx-minX)*k, pad.t+(-P[i][0]-minY)*k];
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("role","img"); svg.setAttribute("aria-label","Mappa schematica: "+m.title);
+  const el=(n,a,p=svg)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.append(e);return e};
+  // griglia leggera ogni ~500 m o 100 m
+  const pxPerM=k/111320; const step=[100,200,500,1000].find(s=>s*pxPerM>=60)||1000;
+  for(let x=offX%(step*pxPerM);x<W;x+=step*pxPerM) el("line",{x1:x,y1:0,x2:x,y2:H,stroke:"var(--line)","stroke-width":1,opacity:.6});
+  for(let y=pad.t%(step*pxPerM);y<H;y+=step*pxPerM) el("line",{x1:0,y1:y,x2:W,y2:y,stroke:"var(--line)","stroke-width":1,opacity:.6});
+  const pts=a=>a.map(i=>xy(i).map(v=>v.toFixed(1)).join(",")).join(" ");
+  // alternative sotto, tratteggiate
+  m.legs.forEach(l=>l.alt&&l.alt.segs.forEach(([md,a])=>el("polyline",{points:pts(a),fill:"none",stroke:COL[md],"stroke-width":3.5,"stroke-dasharray":"2 6","stroke-linecap":"round","stroke-linejoin":"round",opacity:.9})));
+  // percorso previsto
+  m.legs.forEach(l=>l.segs.forEach(([md,a])=>el("polyline",{points:pts(a),fill:"none",stroke:COL[md],"stroke-width":md==="w"?4:5,"stroke-linecap":"round","stroke-linejoin":"round"})));
+  // punti
+  ids.forEach(i=>{
+    const [x,y]=xy(i), t=P[i][4]; if(t==="h") return;
+    if(t==="s") el("rect",{x:x-5,y:y-5,width:10,height:10,rx:2,fill:"var(--surface)",stroke:"var(--ink)","stroke-width":2});
+    else el("circle",{cx:x,cy:y,r:6,fill:"var(--surface)",stroke:"var(--ink)","stroke-width":2.5});
+    const pos=P[i][5]||"r", o={r:[10,4,"start"],l:[-10,4,"end"],t:[0,-11,"middle"],b:[0,19,"middle"]}[pos];
+    const tx=el("text",{x:x+o[0],y:y+o[1],"text-anchor":o[2],"font-size":t==="s"?11.5:13,"font-weight":t==="s"?500:600,fill:t==="s"?"var(--muted)":"var(--ink)",stroke:"var(--bg)","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round"});
+    tx.textContent=P[i][2];
+  });
+  // numeri dei tratti, a metà del percorso previsto
+  let n=0;
+  m.legs.forEach(l=>{
+    if(l.off) return; n++; l._n=n;
+    const line=l.segs.flatMap(s=>s[1]).filter((v,j,a)=>j===0||v!==a[j-1]).map(xy);
+    let tot=0; for(let j=1;j<line.length;j++) tot+=Math.hypot(line[j][0]-line[j-1][0],line[j][1]-line[j-1][1]);
+    let half=tot*(l.bf||.5), p=line[0];
+    for(let j=1;j<line.length;j++){const d=Math.hypot(line[j][0]-line[j-1][0],line[j][1]-line[j-1][1]); if(half<=d){const f=d?half/d:0;p=[line[j-1][0]+(line[j][0]-line[j-1][0])*f,line[j-1][1]+(line[j][1]-line[j-1][1])*f];break} half-=d}
+    el("circle",{cx:p[0],cy:p[1],r:10,fill:"var(--ink)",stroke:"var(--bg)","stroke-width":2});
+    const tx=el("text",{x:p[0],y:p[1]+4,"text-anchor":"middle","font-size":11.5,"font-weight":700,fill:"var(--surface)"}); tx.textContent=n;
+  });
+  // scala e nord
+  const bx=16, by=H-16, bl=step*pxPerM;
+  el("line",{x1:bx,y1:by,x2:bx+bl,y2:by,stroke:"var(--ink)","stroke-width":2});
+  el("line",{x1:bx,y1:by-4,x2:bx,y2:by+1,stroke:"var(--ink)","stroke-width":2}); el("line",{x1:bx+bl,y1:by-4,x2:bx+bl,y2:by+1,stroke:"var(--ink)","stroke-width":2});
+  el("text",{x:bx+bl+6,y:by+4,"font-size":11.5,fill:"var(--muted)"}).textContent=step>=1000?`${step/1000} km`:`${step} m`;
+  el("text",{x:W-16,y:24,"text-anchor":"end","font-size":12,"font-weight":700,fill:"var(--muted)"}).textContent="N ↑";
+  const wrap=document.createElement("div"); wrap.className="mapwrap"; wrap.append(svg); box.append(wrap);
+  // elenco tratti
+  const ol=document.createElement("ol"); ol.className="legs";
+  m.legs.forEach(l=>{
+    const li=document.createElement("li"); li.className="leg";
+    li.innerHTML=`<span class="nb${l.off?" off":""}"></span><div class="b"><div class="h"><span class="mono"></span><span class="r"></span></div><div class="m"></div><div class="links"></div></div>`;
+    li.querySelector(".nb").textContent=l.off?"·":l._n;
+    li.querySelector(".mono").textContent=l.t;
+    li.querySelector(".r").textContent=`${P[l.from][2]} → ${P[l.to][2]}`;
+    li.querySelector(".m").textContent=l.main;
+    if(l.alt){const a=document.createElement("div");a.className="alt";const b=document.createElement("b");b.textContent="Alternativa: ";a.append(b,l.alt.text);li.querySelector(".m").after(a)}
+    const links=li.querySelector(".links");
+    [["walking","A piedi su Google Maps ↗"],["transit","Con i mezzi su Google Maps ↗"]].forEach(([md,txt])=>{const a=document.createElement("a");a.href=gmaps(l.from,l.to,md);a.target="_blank";a.rel="noopener";a.textContent=txt;links.append(a)});
+    ol.append(li);
+  });
+  box.append(ol);
+  const note=document.createElement("p"); note.className="mapnote"; note.textContent=m.note+" Mappa schematica: posizioni indicative, per la strada esatta usate i link a Google Maps."; box.append(note);
+}
+
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+function nowItem(t){
+  const cur=ALL.find(e=>e.start<=t&&t<e.end);
+  if(cur) return {kind:"In corso",e:cur};
+  const next=ALL.find(e=>e.start>t);
+  return next?{kind:"Prossimo",e:next}:null;
+}
+function rel(ms){
+  const m=Math.round(ms/60000); if(m<60) return `tra ${m} min`;
+  const h=Math.floor(m/60), r=m%60; if(h<24) return `tra ${h} h${r?` ${r} min`:""}`;
+  const d=Math.round(h/24); return `tra ${d} giorn${d===1?"o":"i"}`;
+}
+function renderNow(){
+  const t=new Date(), n=nowItem(t);
+  if(!n){ $("nowLbl").textContent="Viaggio concluso"; $("nowWhat").textContent="Bentornati a casa"; $("nowWhen").textContent=""; $("nowWhere").textContent=""; return; }
+  $("nowLbl").textContent=n.kind;
+  $("nowWhat").textContent=n.e.title;
+  $("nowWhen").textContent=`${n.e.dayLabel} · ${n.e.s}–${n.e.e}`+(n.kind==="Prossimo"?` · ${rel(n.e.start-t)}`:` · fino alle ${n.e.e}`);
+  $("nowWhere").textContent=n.e.where;
+  renderDay(current,false);
+}
+
+let current=store.get("tab",null);
+function defaultDay(){const n=nowItem(new Date());return n?n.e.day:"lun"}
+function renderTabs(){
+  $("tabs").innerHTML="";
+  DAYS.forEach(d=>{
+    const b=document.createElement("button");
+    b.className="tab"; b.role="tab"; b.id="tab-"+d.id; b.textContent=d.label;
+    b.setAttribute("aria-selected",String(d.id===current));
+    b.onclick=()=>{current=d.id;store.set("tab",d.id);renderTabs();renderDay(d.id);renderMap(d.id)};
+    $("tabs").append(b);
+  });
+}
+function renderDay(id){
+  const d=DAYS.find(x=>x.id===id), t=new Date(), box=$("day");
+  box.innerHTML="";
+  const p=document.createElement("p"); p.className="place"; p.textContent=d.place; box.append(p);
+  const ol=document.createElement("ol"); ol.className="tl";
+  ALL.filter(e=>e.day===id).forEach(e=>{
+    const li=document.createElement("li");
+    li.className="ev"+(e.end<=t?" past":"")+(e.start<=t&&t<e.end?" cur":"");
+    li.innerHTML=`<span class="t"></span><div class="b"><div class="ti"></div><div class="w"></div></div>`;
+    li.querySelector(".t").textContent=e.s;
+    const ti=li.querySelector(".ti"); const tg=document.createElement("span"); tg.className="tag "+e.tag; tg.textContent=e.tag; ti.append(tg, e.title);
+    li.querySelector(".w").textContent=`fino alle ${e.e} · ${e.where}`;
+    if(e.warn){const w=document.createElement("div");w.className="warn";w.textContent=e.warn;li.querySelector(".b").append(w)}
+    ol.append(li);
+  });
+  box.append(ol);
+  if(d.note){const n=document.createElement("p");n.className="note-day";n.textContent=d.note;box.append(n)}
+}
+
+function renderTix(){
+  TIX.forEach(k=>{
+    const c=document.createElement("div"); c.className="card tk";
+    c.innerHTML=`<div class="route"></div><div class="w" style="color:var(--muted);font-size:14px"></div><dl></dl><div class="hint"></div>`;
+    c.querySelector(".route").textContent=k.route; c.querySelector(".w").textContent=k.when; c.querySelector(".hint").textContent=k.note;
+    const dl=c.querySelector("dl");
+    k.rows.forEach(([a,b])=>{
+      const dt=document.createElement("dt");dt.textContent=a;const dd=document.createElement("dd");
+      if(b==="pin"){const btn=document.createElement("button");btn.className="pin";btn.type="button";btn.textContent="Mostra";btn.onclick=()=>{dd.textContent=""};dd.append(btn)} else dd.textContent=b;
+      dl.append(dt,dd);
+    });
+    $("tix").append(c);
+  });
+}
+function renderTodo(){
+  const done=store.get("todo",{});
+  TODO.forEach(([k,txt])=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<label><input type="checkbox" id="todo-${k}"><span></span></label>`;
+    const cb=li.querySelector("input"), sp=li.querySelector("span");
+    sp.textContent=txt; cb.checked=!!done[k]; sp.className=cb.checked?"done":"";
+    cb.onchange=()=>{done[k]=cb.checked;store.set("todo",done);sp.className=cb.checked?"done":""};
+    $("chk").append(li);
+  });
+}
+function renderContacts(){
+  CONTACTS.forEach(([n,num])=>{
+    const c=document.createElement("div"); c.className="card";
+    c.innerHTML=`<div style="min-width:0"><div class="nm"></div><div class="num"></div></div><button class="btn" type="button">Copia</button>`;
+    c.querySelector(".nm").textContent=n; c.querySelector(".num").textContent=num;
+    const b=c.querySelector("button");
+    b.onclick=async()=>{try{await navigator.clipboard.writeText(num.replace(/\s/g,""));b.textContent="Copiato"}catch{const r=document.createRange();r.selectNodeContents(c.querySelector(".num"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Selezionato"}setTimeout(()=>b.textContent="Copia",1500)};
+    $("ct").append(c);
+  });
+}
+
+/* ---- Chiedi ---- */
+function tripText(){
+  const lines=["VIAGGIO di Michele e della figlia Emma (12 anni, finalista del Campionato Nazionale di Disegno Tecnico)."];
+  DAYS.forEach(d=>{lines.push(`\n${d.label} ottobre 2026 – ${d.place}`);d.ev.forEach(e=>lines.push(`- ${e[0]}-${e[1]} ${e[3]}: ${e[4]}${e[5]?" ATTENZIONE: "+e[5]:""}`));if(d.note)lines.push("Nota: "+d.note)});
+  lines.push("\nBIGLIETTI E ALLOGGI");
+  TIX.forEach(k=>lines.push(`- ${k.route} (${k.when}): `+k.rows.map(([a,b])=>`${a} ${b}`).join("; ")+". "+k.note));
+  lines.push("\nDA FARE: "+TODO.map(t=>t[1]).join(" | "));
+  lines.push("\nCONTATTI: "+CONTACTS.map(c=>c[0]+" "+c[1]).join("; "));
+  lines.push(`\nALTRO: Navette CNDT anche alle 14:00 da Termini e 13:30 da Fiumicino il 23/10. Ospiti a Rieti negli hotel Cavour, Miramonti, Blu, Serena, Europa. Ristoranti consigliati a Rieti: Pan Pier Focaccia (Via Tancia 1, 371 387 8829), La Locanda dei Fabbri davanti a San Domenico (Piazza Beata Colomba 3, 0746 481242), Trattoria La Favorita (Piazza Cavour 3, 0746 498043), Osteria Le Tre Sorelle (Via Terenzio Varrone 85, 0746 496666), Pizza e Fichi (Via Garibaldi 253). Dolci: La Mimosa di Adelmo, dove è nata la Torta Mimosa (Via Oberdan 11); Pasticceria Napoleone (Via Sant'Agnese 4). Per la cena a Rieti venerdì e sabato si consiglia di prenotare. A Roma non vogliono usare taxi, solo mezzi pubblici e piedi. Biglietto ATAC BIT 1,50 € per 100 minuti, si può pagare toccando i tornelli della metro con la carta contactless. Hotel Globus vicino alla metro B Bologna. Lunedì: a piedi hotel → Termini (bagagli al KiPoint) → Colosseo, e a fine giornata Monti → Termini; la metro B è il ripiego.`);
+  lines.push("\nSPOSTAMENTI (tratti delle mappe):");
+  Object.entries(MAPS).forEach(([d,m])=>m.legs.forEach(l=>lines.push(`- ${d} ${l.t} ${P[l.from].n} → ${P[l.to].n}: ${l.main}${l.alt?" | Alternativa: "+l.alt.text:""}`)));
+  lines.push(``);
+  return lines.join("\n");
+}
+const QUICK=["Cosa facciamo adesso?","Che posti abbiamo sul treno di ritorno?","Come torniamo in hotel dopo cena?","Dove mangiamo a Rieti stasera?","Cosa portare domenica per entrare in Basilica?"];
+let sample=null, turns=[], ctl=null;
+function addMsg(cls,text){const m=document.createElement("div");m.className="msg "+cls;m.textContent=text;$("log").append(m);$("log").scrollTop=$("log").scrollHeight;return m}
+function setBusy(b){$("send").disabled=b;$("stop").hidden=!b;document.querySelectorAll("#chips .btn").forEach(x=>x.disabled=b)}
+async function ask(q){
+  q=q.trim(); if(!q||!sample) return;
+  $("q").value=""; addMsg("u",q); const out=addMsg("a","Sto pensando…"); setBusy(true);
+  const now=new Date().toLocaleString("it-IT",{timeZone:"Europe/Rome",weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+  const rules=`Sei l'assistente di viaggio di Michele ed Emma. Rispondi in italiano, breve e pratico (massimo 6 righe, niente markdown pesante). Usa i dati qui sotto; se un'informazione non c'è o potrebbe essere cambiata, dillo e suggerisci come verificarla. Ora attuale a Roma: ${now}.\n\n${tripText()}`;
+  turns.push({role:"user",content:q});
+  ctl=new AbortController();
+  try{
+    const {text}=await sample([{role:"user",content:rules},{role:"assistant",content:"Ok, ho il programma del viaggio. Chiedimi pure."},...turns.slice(-8)],{cache:false,signal:ctl.signal,onText:({text})=>{out.textContent=text}});
+    turns.push({role:"assistant",content:text});
+  }catch(e){
+    turns.pop();
+    if(e.code==="cancelled"){out.textContent=(e.text||"")+" [interrotto]"}
+    else if(["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(e.code)){out.textContent="Le domande non sono disponibili in questa vista. Il programma qui sopra resta consultabile.";$("askForm").hidden=true;$("chips").hidden=true}
+    else if(e.code==="rate_limited"){out.textContent="Troppe domande di fila. Riprova tra qualche minuto."}
+    else if(e.code==="session_expired"){out.textContent="Sessione scaduta: accedi di nuovo a Claude e riprova."}
+    else {out.textContent=(e.text?e.text+"\n\n":"")+"Risposta interrotta. Riprova."}
+  }finally{setBusy(false)}
+}
+QUICK.forEach(q=>{const b=document.createElement("button");b.className="btn";b.type="button";b.textContent=q;b.onclick=()=>ask(q);$("chips").append(b)});
+$("askForm").addEventListener("submit",ev=>{ev.preventDefault();ask($("q").value)});
+$("q").addEventListener("keydown",ev=>{if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();ask($("q").value)}});
+$("stop").onclick=()=>ctl?.abort();
+setBusy(true);$("stop").hidden=true;
+(async()=>{
+  try{sample=window.claude?await window.claude.use("sample"):null}catch{sample=null}
+  if(!sample){document.getElementById("askSec").hidden=true;$("askHint").textContent="Le domande a Claude funzionano aprendo la pagina in Claude. Il resto della pagina funziona comunque.";$("askForm").hidden=true;$("chips").hidden=true;return}
+  setBusy(false);
+})();
+
+if(!current||!DAYS.some(d=>d.id===current)) current=defaultDay();
+renderTabs(); renderDay(current); renderMap(current); renderTix(); renderTodo(); renderContacts(); renderNow();
+setInterval(renderNow,30000);
+</script>
+
+</body>
+</html>
