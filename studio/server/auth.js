@@ -20,7 +20,15 @@ export function creaAuthSupabase({ url, chiavePubblica, chiaveSegreta }) {
   return {
     async inviaCodice(email) {
       const { error } = await pubblico().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-      if (error) throw new AuthError(error.status === 429 ? "Troppe richieste di codice: aspetta qualche minuto." : "Non riesco a mandare il codice.");
+      if (error) {
+        // Nel registro solo il motivo del rifiuto, non l'indirizzo email.
+        console.error("[auth] invio email rifiutato:", error.status, error.code, error.message);
+        if (error.status === 429) throw new AuthError("Troppe richieste: aspetta qualche minuto e riprova.");
+        if (error.code === "email_address_not_authorized") {
+          throw new AuthError("Questa email non è abilitata: il servizio email di prova di Supabase scrive solo ai membri del progetto. Usa l'email del tuo account Supabase.");
+        }
+        throw new AuthError("Non riesco a mandare l'email di accesso. Riprova tra poco.");
+      }
       return {};
     },
     async verificaCodice(email, codice) {
