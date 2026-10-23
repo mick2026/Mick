@@ -1,0 +1,9 @@
+node_modules
+.env
+.env.*
+test
+docs
+artifact
+scripts
+supabase
+*.md

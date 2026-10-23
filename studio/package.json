@@ -1,0 +1,21 @@
+{
+  "name": "studio-amico",
+  "version": "0.1.0",
+  "description": "App di supporto allo studio: schede interattive da foto di pagine e appunti",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "demo": "node server/index.js --demo",
+    "test": "node --test"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.136.0",
+    "@supabase/supabase-js": "^2.118.0"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.12"
+  }
+}

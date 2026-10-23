@@ -1,0 +1,28 @@
+# Blueprint di Render per Studio Amico (cartella studio/). Vedi studio/docs/DEPLOY.md.
+services:
+  - type: web
+    name: studio-amico
+    runtime: docker
+    dockerfilePath: ./studio/Dockerfile
+    dockerContext: ./studio
+    region: frankfurt
+    plan: starter
+    healthCheckPath: /api/salute
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: LIMITE_PROVA
+        value: "5"
+      - key: LIMITE_ABBONATO
+        value: "40"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
