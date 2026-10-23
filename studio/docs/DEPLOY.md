@@ -109,6 +109,10 @@ fly deploy
 | `LIMITE_PROVA` | 5 | schede al mese per famiglia in prova |
 | `LIMITE_ABBONATO` | 40 | schede al mese con abbonamento (pagamenti: fase successiva) |
 | `ADMIN_EMAILS` | — | email (separate da virgola) che vedono l'area Amministrazione |
+| `BREVO_API_KEY` | — | chiave API di Brevo per le email di servizio (avvisi e conferme) |
+| `EMAIL_MITTENTE` | — | mittente verificato su Brevo |
+| `AVVISI_EMAIL` | `ADMIN_EMAILS` | chi riceve l'avviso "Nuova iscrizione da approvare" |
+| `APP_URL` | — | indirizzo pubblico dell'app, per i link nelle email |
 | `REGISTRAZIONI` | approvazione | `aperte` = chi si iscrive entra subito, senza approvazione |
 | `VERIFICHE_PER_SCHEDA` | 3 | controlli dei tentativi al mese = limite schede × questo numero |
 | `CLAUDE_MODEL` | `claude-opus-5-5` | modello usato |
@@ -121,6 +125,13 @@ Da lì puoi anche scaricare l'elenco degli iscritti in CSV.
 **Approvazione delle iscrizioni**: chi si iscrive vede "Iscrizione ricevuta" finché non premi
 **Approva** in Amministrazione (puoi anche **Sospendere** un accesso). Gli amministratori sono
 approvati automaticamente.
+
+**Email di avviso**: con `BREVO_API_KEY` ed `EMAIL_MITTENTE` impostati, a ogni nuova iscrizione
+arriva un'email "Nuova iscrizione da approvare" (ad `AVVISI_EMAIL`, o agli amministratori), e chi
+viene approvato riceve "Il tuo accesso a Studio Amico è attivo". La chiave si crea in Brevo:
+**SMTP e API → Chiavi API → Genera una nuova chiave API**. Se nel registro di Render compare un
+errore di Brevo su un indirizzo IP non riconosciuto, in Brevo vai in **Sicurezza → IP autorizzati**
+e disattiva il blocco (gli indirizzi di Render cambiano).
 
 **Costi**: ogni scheda, ripasso e controllo di un tentativo registra token e costo stimato (solo
 numeri). In Amministrazione vedi spesa del mese, costo medio per scheda e costo per famiglia: usali

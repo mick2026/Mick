@@ -2,22 +2,39 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { setTimeout as attesa } from "node:timers/promises";
+import http from "node:http";
 
 const PORT = 18787;
 const BASE = `http://127.0.0.1:${PORT}`;
 const IMG = { mediaType: "image/jpeg", data: Buffer.from("finta").toString("base64") };
 let srv;
 
+// Finto server Brevo: raccoglie le email che il server prova a mandare.
+const emailInviate = [];
+const fintoBrevo = http.createServer((req, res) => {
+  let corpo = "";
+  req.on("data", (c) => (corpo += c));
+  req.on("end", () => {
+    emailInviate.push({ chiave: req.headers["api-key"], ...JSON.parse(corpo) });
+    res.writeHead(201, { "Content-Type": "application/json" }).end('{"messageId":"x"}');
+  });
+});
+
 before(async () => {
+  await new Promise((ok) => fintoBrevo.listen(18790, "127.0.0.1", ok));
   srv = spawn(process.execPath, ["server/index.js"], {
-    env: { ...process.env, DEMO: "1", AUTH: "dev", STORE: "memoria", PORT: String(PORT), LIMITE_PROVA: "2", NODE_ENV: "test", ADMIN_EMAILS: "admin@prova.it", TRUST_PROXY: "1" },
+    env: { ...process.env, DEMO: "1", AUTH: "dev", STORE: "memoria", PORT: String(PORT), LIMITE_PROVA: "2", NODE_ENV: "test", ADMIN_EMAILS: "admin@prova.it", TRUST_PROXY: "1",
+      BREVO_API_KEY: "chiave-test", BREVO_API_URL: "http://127.0.0.1:18790/email", EMAIL_MITTENTE: "noreply@prova.it", APP_URL: "https://app.prova.it" },
     stdio: "ignore",
   });
   for (let i = 0; i < 50; i++) {
     try { await fetch(`${BASE}/api/config`); return; } catch { await attesa(100); }
   }
 });
-after(() => srv.kill());
+after(() => {
+  srv.kill();
+  fintoBrevo.close();
+});
 
 // Ogni chiamata da un IP diverso (dietro proxy), così i limiti anti-abuso per IP non scattano tra un test e l'altro.
 let ip = 0;
@@ -225,4 +242,33 @@ test("registro dei costi: ogni scheda e controllo finisce nel riepilogo del mese
   assert.equal(dopo.costi.perTipo.scheda.immaginiMedie > 0, true);
   assert.ok(dopo.costi.perTipo.verifica.n >= 1);
   assert.ok("costoMese" in dopo.famiglie.find((f) => f.email === "costi@prova.it"));
+});
+
+test("email: avviso all'amministratore alla nuova iscrizione e conferma all'iscritto quando è approvato", async () => {
+  const email = "avviso@prova.it";
+  const trova = async (filtro) => {
+    for (let i = 0; i < 30; i++) {
+      const e = emailInviate.find(filtro);
+      if (e) return e;
+      await attesa(50);
+    }
+    return null;
+  };
+  const token = await accedi(email);
+  await chiama("POST", "/api/consenso", { genitore: true }, token);
+  const avviso = await trova((e) => e.subject === "Nuova iscrizione da approvare" && e.htmlContent.includes(email));
+  assert.ok(avviso, "avviso inviato");
+  assert.deepEqual(avviso.to, [{ email: "admin@prova.it" }]);
+  assert.equal(avviso.chiave, "chiave-test");
+  assert.equal(avviso.sender.email, "noreply@prova.it");
+  assert.ok(avviso.htmlContent.includes("https://app.prova.it/#/admin"));
+
+  // Un secondo consenso non manda un altro avviso.
+  await chiama("POST", "/api/consenso", { genitore: true }, token);
+  await attesa(200);
+  assert.equal(emailInviate.filter((e) => e.htmlContent.includes(email) && e.subject.startsWith("Nuova")).length, 1);
+
+  await approva(email);
+  const conferma = await trova((e) => e.to?.[0]?.email === email && e.subject.includes("attivo"));
+  assert.ok(conferma, "conferma all'iscritto");
 });

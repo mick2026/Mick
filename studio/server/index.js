@@ -12,6 +12,7 @@ import { creaStoreSupabase } from "./store/supabase.js";
 import { generaScheda, generaRipasso, verificaTentativo, RifiutoError } from "./claude.js";
 import { contenutoPerRipasso } from "./prompt.js";
 import { schedaDemo, verificaDemo } from "./demo.js";
+import { avvisaNuovaIscrizione, avvisaApprovazione } from "./notifiche.js";
 
 try {
   verificaConfig();
@@ -223,19 +224,26 @@ const private_ = {
       costi: riepilogoCosti(consumi),
     };
   },
-  "PATCH /api/admin/famiglie/:id": async ({ utente, body, id }) => {
+  "PATCH /api/admin/famiglie/:id": async ({ utente, body, id, origine }) => {
     soloAdmin(utente);
     const campi = body.stato !== undefined ? V.statoFamiglia(body) : V.piano(body);
-    const f = await store.aggiornaFamiglia(V.uuid(id), campi);
+    const fid = V.uuid(id);
+    const prima = campi.stato === "approvata" ? (await store.elencoFamiglie(meseCorrente())).find((x) => x.id === fid) : null;
+    const f = await store.aggiornaFamiglia(fid, campi);
     if (!f) throw new HttpError(404, "Famiglia non trovata.");
+    if (prima && prima.stato !== "approvata" && f.email) avvisaApprovazione(f.email, origine);
     console.log(`[admin] famiglia ${f.id} aggiornata: ${JSON.stringify(campi)}`);
     return f;
   },
   "POST /api/auth/esci": async ({ token }) => (await auth.esci(token), { ok: true }),
-  "POST /api/consenso": async ({ utente, body }) => {
+  "POST /api/consenso": async ({ utente, body, origine }) => {
     if (body.genitore !== true) throw new V.InputError("Serve la conferma del genitore o tutore.");
-    await store.famiglia(utente.id);
+    const prima = await store.famiglia(utente.id, utente.email);
     await store.salvaConsenso(utente.id, CONFIG.versioneConsenso);
+    // Al primo consenso di una nuova iscrizione, avviso agli amministratori (senza attendere l'invio).
+    if (!prima.consenso_at && CONFIG.approvazione && prima.stato === "in_attesa" && !eAdmin(utente)) {
+      avvisaNuovaIscrizione(utente.email, origine);
+    }
     return stato(utente);
   },
   "GET /api/esporta": async ({ utente }) => ({ esportato: new Date().toISOString(), email: utente.email, ...(await store.esporta(utente.id)) }),
@@ -345,7 +353,8 @@ function trova(tabella, metodo, pathname) {
 async function gestisciApi(req, res, url) {
   const ip = ipDi(req);
   try {
-    const ctx = { url, ip };
+    // Link nelle email: in produzione solo APP_URL (l'host della richiesta si può falsificare).
+    const ctx = { url, ip, origine: CONFIG.appUrl || (CONFIG.produzione ? "" : `http://${req.headers.host ?? "localhost"}`) };
     const pub = trova(pubbliche, req.method, url.pathname);
     const libera = pub ? null : trova(private_, req.method, url.pathname);
     const vincolata = pub || libera ? null : trova(conConsenso, req.method, url.pathname);

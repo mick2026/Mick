@@ -25,6 +25,12 @@ services:
         sync: false
       - key: ADMIN_EMAILS
         sync: false
+      - key: APP_URL
+        value: https://studio-amico.onrender.com
+      - key: EMAIL_MITTENTE
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY

@@ -20,6 +20,7 @@ function urlSupabase(v) {
     return v.trim();
   }
 }
+const elenco = (v) => (v || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 const haSupabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SECRET_KEY);
 
 export const CONFIG = {
@@ -49,7 +50,16 @@ export const CONFIG = {
   // Le nuove iscrizioni devono essere approvate da un amministratore (REGISTRAZIONI=aperte per disattivare).
   approvazione: env.REGISTRAZIONI !== "aperte",
   // Email (separate da virgola) che vedono l'area Amministrazione.
-  admin: (env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
+  admin: elenco(env.ADMIN_EMAILS),
+  // Indirizzo pubblico dell'app per i link nelle email (altrimenti ricavato dalla richiesta).
+  appUrl: (env.APP_URL || "").replace(/\/+$/, ""),
+  // Email di servizio via API di Brevo: senza BREVO_API_KEY non parte nessuna email (l'app funziona lo stesso).
+  email: {
+    apiKey: env.BREVO_API_KEY || "",
+    apiUrl: env.BREVO_API_URL || "https://api.brevo.com/v3/smtp/email",
+    mittente: env.EMAIL_MITTENTE || "",
+    avvisi: elenco(env.AVVISI_EMAIL || env.ADMIN_EMAILS),
+  },
 };
 
 export function verificaConfig() {

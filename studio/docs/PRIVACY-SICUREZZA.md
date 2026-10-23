@@ -23,6 +23,9 @@ iscrizione e consenso, piano, numero di profili e schede, uso del mese. Non most
 ragazzi né il contenuto delle schede (minimizzazione). I cambi di piano e di stato (approvata,
 sospesa) vengono registrati nei log.
 
+**Email di servizio** (via Brevo, fornitore UE): all'amministratore l'email di chi si iscrive, per
+approvarlo; all'iscritto la conferma di approvazione. Nessun dato dei ragazzi nelle email.
+
 **Registro dei costi** (tabella `consumi`): per ogni richiesta a Claude solo famiglia, data, tipo,
 modello, numero di immagini, token e costo stimato. Nessun testo, foto o contenuto delle schede.
 
