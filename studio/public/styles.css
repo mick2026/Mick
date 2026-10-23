@@ -187,6 +187,14 @@ details summary { cursor: pointer; color: var(--pri); font-weight: 600; margin: 
 .riga-piano { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
 .riga-piano select, .riga-piano input { padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); min-height: 40px; }
 
+.badge.stato { vertical-align: middle; }
+.stato-in_attesa .badge.stato { background: #FFF1D6; color: #8A5A00; }
+.stato-approvata .badge.stato { background: var(--ok-bg); color: var(--ok); }
+.stato-sospesa .badge.stato { background: var(--no-bg); color: var(--no); }
+.tabella-scroll { overflow-x: auto; margin: 8px 0; }
+.tabella { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.tabella th, .tabella td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+
 /* ---------- Stampa A4 ---------- */
 @page { size: A4; margin: 15mm 14mm; }
 @media print {

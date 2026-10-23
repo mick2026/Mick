@@ -71,7 +71,7 @@ export function creaStoreSupabase({ url, chiaveSegreta }) {
     // Area amministrazione: dati di servizio, senza nomi dei ragazzi né contenuto delle schede.
     async elencoFamiglie(mese) {
       const [famiglie, uso] = await Promise.all([
-        sb.from("famiglie").select("id, email, creata, piano, abbonamento_scade, consenso_versione, consenso_at, profili(count), schede(count)").order("creata", { ascending: false }).then(ok),
+        sb.from("famiglie").select("id, email, stato, creata, piano, abbonamento_scade, consenso_versione, consenso_at, profili(count), schede(count)").order("creata", { ascending: false }).then(ok),
         sb.from("utilizzo").select("famiglia_id, schede, verifiche").eq("mese", mese).then(ok),
       ]);
       const perFamiglia = new Map(uso.map((u) => [u.famiglia_id, { schede: u.schede, verifiche: u.verifiche }]));
@@ -82,7 +82,13 @@ export function creaStoreSupabase({ url, chiaveSegreta }) {
         mese: perFamiglia.get(f.id) ?? { schede: 0, verifiche: 0 },
       }));
     },
-    async aggiornaPiano(fid, campi) {
+    async registraConsumo(riga) {
+      ok(await sb.from("consumi").insert(riga));
+    },
+    async consumiDelMese(mese) {
+      return ok(await sb.from("consumi").select("famiglia_id, tipo, modello, immagini, token_in, token_out, token_cache, costo_usd").eq("mese", mese).limit(10000));
+    },
+    async aggiornaFamiglia(fid, campi) {
       return ok(await sb.from("famiglie").update(campi).eq("id", fid).select().maybeSingle());
     },
 

@@ -32,8 +32,9 @@ Telefono ──► Server Studio Amico (Render/Fly, Francoforte) ──► API A
    - Password del database: generala e conservala.
 2. Apri **SQL Editor**, incolla tutto il file `supabase/migrations/001_iniziale.sql` e premi **Run**.
    Crea le tabelle (famiglie, profili, schede, utilizzo) chiuse a chiunque tranne il server.
-   Poi, in una nuova query, esegui anche `supabase/migrations/002_email_famiglie.sql`
-   (aggiunge l'email del genitore, usata dall'area amministrazione).
+   Poi, in nuove query, esegui anche `supabase/migrations/002_email_famiglie.sql` (email del
+   genitore per l'area amministrazione) e `supabase/migrations/003_approvazione_costi.sql`
+   (approvazione delle iscrizioni e registro dei costi di Claude).
 3. **Authentication → Sign In / Providers → Email**: lascia attivo Email.
 4. **Email di accesso**: con il servizio email incluso in Supabase arriva un **link** "Log In".
    L'app lo accetta così com'è: basta toccarlo. Il servizio incluso però manda email **solo ai
@@ -108,6 +109,7 @@ fly deploy
 | `LIMITE_PROVA` | 5 | schede al mese per famiglia in prova |
 | `LIMITE_ABBONATO` | 40 | schede al mese con abbonamento (pagamenti: fase successiva) |
 | `ADMIN_EMAILS` | — | email (separate da virgola) che vedono l'area Amministrazione |
+| `REGISTRAZIONI` | approvazione | `aperte` = chi si iscrive entra subito, senza approvazione |
 | `VERIFICHE_PER_SCHEDA` | 3 | controlli dei tentativi al mese = limite schede × questo numero |
 | `CLAUDE_MODEL` | `claude-opus-5-5` | modello usato |
 | `CLAUDE_EFFORT` | `medium` | profondità di ragionamento |
@@ -115,6 +117,14 @@ fly deploy
 Per passare a mano una famiglia ad "abbonato" (prima dei pagamenti automatici): nell'app,
 **Impostazioni → Amministrazione**, scegli il piano e l'eventuale scadenza e premi **Salva**.
 Da lì puoi anche scaricare l'elenco degli iscritti in CSV.
+
+**Approvazione delle iscrizioni**: chi si iscrive vede "Iscrizione ricevuta" finché non premi
+**Approva** in Amministrazione (puoi anche **Sospendere** un accesso). Gli amministratori sono
+approvati automaticamente.
+
+**Costi**: ogni scheda, ripasso e controllo di un tentativo registra token e costo stimato (solo
+numeri). In Amministrazione vedi spesa del mese, costo medio per scheda e costo per famiglia: usali
+per decidere prezzi e limiti. Il totale ufficiale resta quello di platform.claude.com → Usage.
 
 ## Costi indicativi all'avvio
 

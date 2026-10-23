@@ -3,15 +3,15 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 
 export function creaStoreMemoria(file = "") {
-  let db = { famiglie: {}, profili: {}, schede: {}, utilizzo: {} };
-  if (file && fs.existsSync(file)) db = JSON.parse(fs.readFileSync(file, "utf8"));
+  let db = { famiglie: {}, profili: {}, schede: {}, utilizzo: {}, consumi: [] };
+  if (file && fs.existsSync(file)) db = { consumi: [], ...JSON.parse(fs.readFileSync(file, "utf8")) };
   const persisti = () => file && fs.writeFileSync(file, JSON.stringify(db));
   const copia = (o) => (o == null ? null : structuredClone(o));
   const ora = () => new Date().toISOString();
 
   return {
     async famiglia(id, email) {
-      db.famiglie[id] ??= { id, email: null, creata: ora(), piano: "prova", abbonamento_scade: null, consenso_versione: null, consenso_at: null };
+      db.famiglie[id] ??= { id, email: null, stato: "in_attesa", creata: ora(), piano: "prova", abbonamento_scade: null, consenso_versione: null, consenso_at: null };
       if (email) db.famiglie[id].email = email;
       persisti();
       return copia(db.famiglie[id]);
@@ -100,7 +100,14 @@ export function creaStoreMemoria(file = "") {
         }))
         .sort((a, b) => b.creata.localeCompare(a.creata));
     },
-    async aggiornaPiano(fid, campi) {
+    async registraConsumo(riga) {
+      db.consumi.push({ ...riga, creato: ora() });
+      persisti();
+    },
+    async consumiDelMese(mese) {
+      return db.consumi.filter((c) => c.mese === mese).map(copia);
+    },
+    async aggiornaFamiglia(fid, campi) {
       if (!db.famiglie[fid]) return null;
       Object.assign(db.famiglie[fid], campi);
       persisti();
@@ -117,6 +124,7 @@ export function creaStoreMemoria(file = "") {
     },
     async eliminaFamiglia(fid) {
       delete db.famiglie[fid];
+      db.consumi = db.consumi.filter((c) => c.famiglia_id !== fid);
       for (const t of ["profili", "schede"]) for (const [id, r] of Object.entries(db[t])) if (r.famiglia_id === fid) delete db[t][id];
       for (const k of Object.keys(db.utilizzo)) if (k.startsWith(fid + "|")) delete db.utilizzo[k];
       persisti();

@@ -46,6 +46,8 @@ export const CONFIG = {
     profiliPerFamiglia: 6,
   },
   versioneConsenso: "2026-10",
+  // Le nuove iscrizioni devono essere approvate da un amministratore (REGISTRAZIONI=aperte per disattivare).
+  approvazione: env.REGISTRAZIONI !== "aperte",
   // Email (separate da virgola) che vedono l'area Amministrazione.
   admin: (env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
 };

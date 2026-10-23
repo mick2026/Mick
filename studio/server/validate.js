@@ -123,3 +123,9 @@ export function piano(body) {
   }
   return { piano, abbonamento_scade: piano === "abbonato" ? scade : null };
 }
+
+export function statoFamiglia(body) {
+  const stato = tra(body.stato, ["in_attesa", "approvata", "sospesa"]);
+  if (!stato) throw new InputError("Stato non valido.");
+  return { stato };
+}

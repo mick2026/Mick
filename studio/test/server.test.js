@@ -41,9 +41,26 @@ async function accedi(email) {
   return s.dati.access_token;
 }
 
+let tokenAdmin;
+async function admin() {
+  tokenAdmin ??= await accedi("admin@prova.it");
+  await chiama("GET", "/api/io", null, tokenAdmin);
+  return tokenAdmin;
+}
+
+async function approva(email, stato = "approvata") {
+  const t = await admin();
+  const { dati } = await chiama("GET", "/api/admin/famiglie", null, t);
+  const f = dati.famiglie.find((x) => x.email === email);
+  assert.ok(f, "famiglia in elenco: " + email);
+  assert.equal((await chiama("PATCH", `/api/admin/famiglie/${f.id}`, { stato }, t)).status, 200);
+  return f;
+}
+
 async function famigliaPronta(email) {
   const token = await accedi(email);
   await chiama("POST", "/api/consenso", { genitore: true }, token);
+  await approva(email.toLowerCase());
   const p = await chiama("POST", "/api/profili", { nome: "Tommaso", livello: "media2", lingua: "it" }, token);
   return { token, profilo: p.dati.id };
 }
@@ -77,6 +94,7 @@ test("serve il consenso del genitore prima di creare profili e schede", async ()
   assert.equal(r.status, 403);
   assert.equal(r.dati.codice, "consenso");
   assert.equal((await chiama("POST", "/api/consenso", { genitore: true }, token)).status, 200);
+  await approva("consenso@prova.it");
   assert.equal((await chiama("POST", "/api/profili", { nome: "Ada" }, token)).status, 200);
 });
 
@@ -164,7 +182,7 @@ test("area amministrazione: solo per ADMIN_EMAILS, senza nomi dei ragazzi; il pi
   assert.equal((await chiama("GET", "/api/io", null, admin.token)).dati.admin, true);
   const elenco = await chiama("GET", "/api/admin/famiglie", null, admin.token);
   assert.equal(elenco.status, 200);
-  const riga = elenco.dati.find((f) => f.email === "iscritto@prova.it");
+  const riga = elenco.dati.famiglie.find((f) => f.email === "iscritto@prova.it");
   assert.ok(riga);
   assert.equal(riga.profili, 1);
   assert.ok(!JSON.stringify(elenco.dati).includes("Tommaso"), "niente nomi dei profili");
@@ -174,4 +192,37 @@ test("area amministrazione: solo per ADMIN_EMAILS, senza nomi dei ragazzi; il pi
   const p = await chiama("PATCH", `/api/admin/famiglie/${riga.id}`, { piano: "abbonato", abbonamento_scade: "2099-12-31" }, admin.token);
   assert.equal(p.status, 200);
   assert.equal((await chiama("GET", "/api/io", null, fam.token)).dati.utilizzo.limiteSchede, 40);
+});
+
+test("approvazione: chi si iscrive aspetta, l'amministratore approva o sospende", async () => {
+  const token = await accedi("nuovo@prova.it");
+  assert.equal((await chiama("POST", "/api/consenso", { genitore: true }, token)).status, 200);
+  const io = await chiama("GET", "/api/io", null, token);
+  assert.equal(io.dati.famiglia.stato, "in_attesa");
+  const bloccata = await chiama("POST", "/api/profili", { nome: "Leo" }, token);
+  assert.equal(bloccata.status, 403);
+  assert.equal(bloccata.dati.codice, "approvazione");
+  assert.ok((await chiama("GET", "/api/io", null, await admin())).dati.inAttesa >= 1);
+
+  await approva("nuovo@prova.it");
+  assert.equal((await chiama("POST", "/api/profili", { nome: "Leo" }, token)).status, 200);
+
+  await approva("nuovo@prova.it", "sospesa");
+  const sospesa = await chiama("GET", "/api/schede?profilo=" + crypto.randomUUID(), null, token);
+  assert.equal(sospesa.status, 403);
+  assert.equal(sospesa.dati.errore, "Accesso sospeso.");
+  assert.equal((await chiama("PATCH", "/api/admin/famiglie/" + io.dati.famiglia.id, { stato: "boh" }, await admin())).status, 400);
+});
+
+test("registro dei costi: ogni scheda e controllo finisce nel riepilogo del mese", async () => {
+  const t = await admin();
+  const prima = (await chiama("GET", "/api/admin/famiglie", null, t)).dati.costi;
+  const { token, profilo } = await famigliaPronta("costi@prova.it");
+  const s = (await chiama("POST", "/api/scheda", { profilo, immagini: [IMG, IMG] }, token)).dati;
+  await chiama("POST", "/api/verifica-tentativo", { scheda: s.id, esercizio: 0, immagini: [IMG] }, token);
+  const dopo = (await chiama("GET", "/api/admin/famiglie", null, t)).dati;
+  assert.equal(dopo.costi.richieste, prima.richieste + 2);
+  assert.equal(dopo.costi.perTipo.scheda.immaginiMedie > 0, true);
+  assert.ok(dopo.costi.perTipo.verifica.n >= 1);
+  assert.ok("costoMese" in dopo.famiglie.find((f) => f.email === "costi@prova.it"));
 });

@@ -510,7 +510,7 @@ function vistaImpostazioni() {
     <div id="form-profilo"></div>
     <a class="btn btn-sec" href="#/profili">＋ ${t("aggiungiProfilo")}</a>
 
-    ${io.admin ? `<h2>🛠️ ${t("admin")}</h2><a class="btn btn-sec" href="#/admin">${t("apriAdmin")}</a>` : ""}
+    ${io.admin ? `<h2>🛠️ ${t("admin")}</h2><a class="btn btn-sec" href="#/admin">${t("apriAdmin")}${io.inAttesa ? ` · ${t("adminDaApprovare").replace("{n}", io.inAttesa)}` : ""}</a>` : ""}
 
     <h2>👤 ${t("account")}</h2>
     <p>${esc(io.email)}</p>
@@ -579,27 +579,69 @@ function vistaImpostazioni() {
   };
 }
 
+// ---------- iscrizione in attesa di approvazione ----------
+function vistaAttesa() {
+  const sospesa = io.famiglia.stato === "sospesa";
+  app.innerHTML = `<section class="pannello centro">
+    <h1>${sospesa ? "⏸️ " + t("sospesaTitolo") : "⏳ " + t("attesaTitolo")}</h1>
+    <p>${sospesa ? t("sospesaTesto") : t("attesaTesto")}</p>
+    <p class="nota">${esc(io.email)}</p>
+    <button class="btn btn-pri" id="ricontrolla">${t("ricontrolla")}</button>
+    <p><button class="link" id="esci">${t("esci")}</button></p>
+  </section>`;
+  $("#ricontrolla").onclick = async () => {
+    io = null;
+    await router();
+  };
+  $("#esci").onclick = () => esci();
+}
+
 // ---------- amministrazione (solo email in ADMIN_EMAILS) ----------
 async function vistaAdmin() {
   if (!io.admin) return (location.hash = "#/impostazioni");
-  const famiglie = await api("GET", "/api/admin/famiglie");
+  const { famiglie, costi } = await api("GET", "/api/admin/famiglie");
   const data = (iso) => (iso ? dataBreve(iso) : "—");
+  const usd = (n) => "$" + Number(n || 0).toFixed(n && n < 0.1 ? 3 : 2);
+  const ordine = { in_attesa: 0, approvata: 1, sospesa: 2 };
+  famiglie.sort((x, y) => ordine[x.stato ?? "approvata"] - ordine[y.stato ?? "approvata"]);
   const abbonati = famiglie.filter((f) => f.piano === "abbonato").length;
-  const schedeMese = famiglie.reduce((n, f) => n + f.mese.schede, 0);
+  const inAttesa = famiglie.filter((f) => f.stato === "in_attesa").length;
+  const riga = (tipo) => {
+    const c = costi.perTipo[tipo];
+    return c ? `<tr><td>${t("costo_" + tipo)}</td><td>${c.n}</td><td>${usd(c.medio)}</td><td>${usd(c.costo)}</td><td>${c.tokenInMedi} / ${c.tokenOutMedi}</td></tr>` : "";
+  };
 
   app.innerHTML = `<section class="pannello">
     <h1>🛠️ ${t("admin")}</h1>
     <div class="numeri">
       <div><strong>${famiglie.length}</strong><span>${t("adminFamiglie")}</span></div>
+      <div><strong>${inAttesa}</strong><span>${t("adminInAttesa")}</span></div>
       <div><strong>${abbonati}</strong><span>${t("adminAbbonati")}</span></div>
-      <div><strong>${schedeMese}</strong><span>${t("adminSchedeMese")}</span></div>
     </div>
+
+    <h2>💶 ${t("costiTitolo")}</h2>
+    <p class="nota">${t("costiTesto")}</p>
+    <div class="numeri">
+      <div><strong>${usd(costi.totale)}</strong><span>${t("costiTotale")}</span></div>
+      <div><strong>${costi.richieste}</strong><span>${t("costiRichieste")}</span></div>
+      <div><strong>${usd(costi.perTipo.scheda?.medio)}</strong><span>${t("costiMedioScheda")}</span></div>
+    </div>
+    ${costi.richieste ? `<div class="tabella-scroll"><table class="tabella">
+      <thead><tr><th>${t("costiTipo")}</th><th>${t("costiN")}</th><th>${t("costiMedio")}</th><th>${t("costiTot")}</th><th>${t("costiToken")}</th></tr></thead>
+      <tbody>${riga("scheda")}${riga("ripasso")}${riga("verifica")}</tbody>
+    </table></div><p class="nota">${t("costiModelli")}: ${esc(costi.modelli.join(", "))}</p>` : ""}
+
+    <h2>👨‍👩‍👧 ${t("adminIscritti")}</h2>
     <label class="campo" for="cerca">${t("adminCerca")}<input id="cerca" type="search" autocomplete="off"></label>
     <button class="btn btn-sec" id="csv">⬇️ ${t("adminCsv")}</button>
-    <ul class="elenco" id="lista-famiglie">${famiglie.map((f) => `<li class="famiglia" data-email="${esc((f.email ?? "").toLowerCase())}">
-      <p><strong>${esc(f.email ?? t("adminSenzaEmail"))}</strong></p>
+    <ul class="elenco" id="lista-famiglie">${famiglie.map((f) => `<li class="famiglia stato-${esc(f.stato ?? "approvata")}" data-email="${esc((f.email ?? "").toLowerCase())}">
+      <p><span class="badge stato">${t("stato_" + (f.stato ?? "approvata"))}</span> <strong>${esc(f.email ?? t("adminSenzaEmail"))}</strong></p>
       <p class="meta">${t("adminIscritta")} ${data(f.creata)} · ${t("adminConsenso")} ${data(f.consenso_at)} · ${f.profili} ${t("adminProfili")} · ${f.schede} ${t("adminSchedeTot")}</p>
-      <p class="meta">${t("adminMese")}: ${f.mese.schede}/${f.limiteSchede} ${t("adminSchede")}, ${f.mese.verifiche} ${t("adminVerifiche")}</p>
+      <p class="meta">${t("adminMese")}: ${f.mese.schede}/${f.limiteSchede} ${t("adminSchede")}, ${f.mese.verifiche} ${t("adminVerifiche")} · ${t("costiFamiglia")} ${usd(f.costoMese)}</p>
+      <div class="riga-piano">
+        ${f.stato !== "approvata" ? `<button class="btn btn-pri" data-stato="approvata" data-id="${f.id}">✅ ${t("approva")}</button>` : ""}
+        ${f.stato !== "sospesa" ? `<button class="btn btn-ghost pericolo" data-stato="sospesa" data-id="${f.id}">⏸️ ${t("sospendi")}</button>` : ""}
+      </div>
       <div class="riga-piano">
         <select data-piano="${f.id}" aria-label="${t("adminPiano")}">
           <option value="prova" ${f.piano === "prova" ? "selected" : ""}>${t("pianoProva")}</option>
@@ -618,22 +660,23 @@ async function vistaAdmin() {
   };
   $("#csv").onclick = () => {
     const cella = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const righe = [["email", "iscritta", "consenso", "piano", "scadenza", "profili", "schede_totali", "schede_mese", "limite_mese", "verifiche_mese"]]
-      .concat(famiglie.map((f) => [f.email, f.creata, f.consenso_at, f.piano, f.abbonamento_scade, f.profili, f.schede, f.mese.schede, f.limiteSchede, f.mese.verifiche]))
+    const righe = [["email", "stato", "iscritta", "consenso", "piano", "scadenza", "profili", "schede_totali", "schede_mese", "limite_mese", "verifiche_mese", "costo_mese_usd"]]
+      .concat(famiglie.map((f) => [f.email, f.stato, f.creata, f.consenso_at, f.piano, f.abbonamento_scade, f.profili, f.schede, f.mese.schede, f.limiteSchede, f.mese.verifiche, Number(f.costoMese).toFixed(4)]))
       .map((r) => r.map(cella).join(","));
     scarica(new Blob(["\ufeff" + righe.join("\n")], { type: "text/csv" }), `studio-amico-iscritti-${new Date().toISOString().slice(0, 10)}.csv`);
   };
   app.onclick = async (ev) => {
-    const b = ev.target.closest("[data-salva-piano]");
-    if (!b) return;
-    const id = b.dataset.salvaPiano;
+    const st = ev.target.closest("[data-stato]");
+    const pi = ev.target.closest("[data-salva-piano]");
+    if (!st && !pi) return;
+    const id = st?.dataset.id ?? pi.dataset.salvaPiano;
+    const corpo = st
+      ? { stato: st.dataset.stato }
+      : { piano: app.querySelector(`[data-piano="${id}"]`).value, abbonamento_scade: app.querySelector(`[data-scade="${id}"]`).value || null };
     try {
-      await api("PATCH", `/api/admin/famiglie/${id}`, {
-        piano: app.querySelector(`[data-piano="${id}"]`).value,
-        abbonamento_scade: app.querySelector(`[data-scade="${id}"]`).value || null,
-      });
+      await api("PATCH", `/api/admin/famiglie/${id}`, corpo);
       toast(t("salvato"));
-      if (id === io.famiglia.id) await aggiornaIo();
+      await aggiornaIo();
       vistaAdmin();
     } catch (e) {
       toast(e.message);
@@ -687,6 +730,7 @@ async function router() {
     return;
   }
   if (!io.famiglia.consenso_at) return vistaConsenso();
+  if (io.approvazione && io.famiglia.stato !== "approvata" && !io.admin) return vistaAttesa();
   if (vista === "profili" || !profiloCorrente()) {
     if (vista !== "profili" && io.profili.length === 1) pref("profilo", io.profili[0].id);
     else return vistaProfili();

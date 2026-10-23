@@ -20,7 +20,11 @@ Versione con login (server + Supabase in UE):
 
 **Area amministrazione** (solo le email in `ADMIN_EMAILS`): mostra email del genitore, date di
 iscrizione e consenso, piano, numero di profili e schede, uso del mese. Non mostra i nomi dei
-ragazzi né il contenuto delle schede (minimizzazione). I cambi di piano vengono registrati nei log.
+ragazzi né il contenuto delle schede (minimizzazione). I cambi di piano e di stato (approvata,
+sospesa) vengono registrati nei log.
+
+**Registro dei costi** (tabella `consumi`): per ogni richiesta a Claude solo famiglia, data, tipo,
+modello, numero di immagini, token e costo stimato. Nessun testo, foto o contenuto delle schede.
 
 Diritti dell'interessato già nell'app: **Scarica tutti i dati** (portabilità, art. 20) ed
 **Elimina account** (cancellazione, art. 17), con cancellazione a cascata di profili e schede.

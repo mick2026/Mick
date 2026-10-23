@@ -119,7 +119,8 @@ async function profiloDellaFamiglia(fid, pid) {
 }
 
 async function stato(utente) {
-  const famiglia = await store.famiglia(utente.id, utente.email);
+  let famiglia = await store.famiglia(utente.id, utente.email);
+  if (eAdmin(utente) && famiglia.stato !== "approvata") famiglia = await store.aggiornaFamiglia(utente.id, { stato: "approvata" });
   const [profili, uso] = await Promise.all([store.profili(utente.id), store.utilizzo(utente.id, meseCorrente())]);
   const limite = limiteSchede(famiglia);
   return {
@@ -129,18 +130,45 @@ async function stato(utente) {
   };
 }
 
+const CONSUMO_DEMO = { modello: "demo", token_in: 0, token_out: 0, token_cache: 0, costo_usd: 0 };
+
 // Scala una quota prima di chiamare Claude e la restituisce se la generazione fallisce.
-async function conQuota(fid, tipo, limite, lavoro) {
+// Il lavoro restituisce { dati, consumo }: il consumo (solo numeri) finisce nel registro dei costi.
+async function conQuota(fid, tipo, limite, registro, lavoro) {
   const mese = meseCorrente();
   if (!(await store.consuma(fid, mese, tipo, limite))) {
     throw new HttpError(402, tipo === "schede" ? "Hai usato tutte le schede di questo mese." : "Hai usato tutti i controlli dei tentativi di questo mese.", "limite");
   }
+  let risultato;
   try {
-    return await lavoro();
+    risultato = await lavoro();
   } catch (e) {
     await store.consuma(fid, mese, tipo, limite, -1).catch(() => {});
     throw e;
   }
+  await store
+    .registraConsumo({ famiglia_id: fid, mese, ...registro, ...risultato.consumo })
+    .catch((e) => console.error("[consumi] non registrato:", e.message));
+  return risultato.dati;
+}
+
+// Totali del mese per tipo di richiesta: numero, costo, costo medio, token medi.
+function riepilogoCosti(consumi) {
+  const perTipo = {};
+  let totale = 0;
+  for (const c of consumi) {
+    const t = (perTipo[c.tipo] ??= { n: 0, costo: 0, tokenIn: 0, tokenOut: 0, immagini: 0 });
+    t.n++;
+    t.costo += Number(c.costo_usd);
+    t.tokenIn += c.token_in;
+    t.tokenOut += c.token_out;
+    t.immagini += c.immagini;
+    totale += Number(c.costo_usd);
+  }
+  for (const t of Object.values(perTipo)) {
+    Object.assign(t, { medio: t.costo / t.n, tokenInMedi: Math.round(t.tokenIn / t.n), tokenOutMedi: Math.round(t.tokenOut / t.n), immaginiMedie: t.immagini / t.n });
+  }
+  return { totale, richieste: consumi.length, perTipo, modelli: [...new Set(consumi.map((c) => c.modello))] };
 }
 
 const eAdmin = (utente) => Boolean(utente.email) && CONFIG.admin.includes(utente.email.toLowerCase());
@@ -177,17 +205,30 @@ const pubbliche = {
 };
 
 const private_ = {
-  "GET /api/io": async ({ utente }) => ({ email: utente.email, admin: eAdmin(utente), ...(await stato(utente)) }),
+  "GET /api/io": async ({ utente }) => {
+    const s = await stato(utente);
+    const admin = eAdmin(utente);
+    const inAttesa = admin ? (await store.elencoFamiglie(meseCorrente())).filter((f) => f.stato === "in_attesa").length : 0;
+    return { email: utente.email, admin, inAttesa, approvazione: CONFIG.approvazione, ...s };
+  },
   "GET /api/admin/famiglie": async ({ utente }) => {
     soloAdmin(utente);
     const mese = meseCorrente();
-    return (await store.elencoFamiglie(mese)).map((f) => ({ ...f, limiteSchede: limiteSchede(f) }));
+    const [famiglie, consumi] = await Promise.all([store.elencoFamiglie(mese), store.consumiDelMese(mese)]);
+    const costo = new Map();
+    for (const c of consumi) costo.set(c.famiglia_id, (costo.get(c.famiglia_id) ?? 0) + Number(c.costo_usd));
+    return {
+      mese,
+      famiglie: famiglie.map((f) => ({ ...f, limiteSchede: limiteSchede(f), costoMese: costo.get(f.id) ?? 0 })),
+      costi: riepilogoCosti(consumi),
+    };
   },
   "PATCH /api/admin/famiglie/:id": async ({ utente, body, id }) => {
     soloAdmin(utente);
-    const f = await store.aggiornaPiano(V.uuid(id), V.piano(body));
+    const campi = body.stato !== undefined ? V.statoFamiglia(body) : V.piano(body);
+    const f = await store.aggiornaFamiglia(V.uuid(id), campi);
     if (!f) throw new HttpError(404, "Famiglia non trovata.");
-    console.log(`[admin] piano aggiornato: famiglia ${f.id} -> ${f.piano}`);
+    console.log(`[admin] famiglia ${f.id} aggiornata: ${JSON.stringify(campi)}`);
     return f;
   },
   "POST /api/auth/esci": async ({ token }) => (await auth.esci(token), { ok: true }),
@@ -240,8 +281,8 @@ const conConsenso = {
   "POST /api/scheda": async ({ utente, body, famiglia }) => {
     const input = V.nuovaScheda(body);
     const p = await profiloDellaFamiglia(utente.id, input.profilo);
-    const out = await conQuota(utente.id, "schede", limiteSchede(famiglia), async () =>
-      CONFIG.demo ? schedaDemo() : generaScheda({ ...input, livello: p.livello, lingua: p.lingua }),
+    const out = await conQuota(utente.id, "schede", limiteSchede(famiglia), { tipo: "scheda", immagini: input.immagini.length }, async () =>
+      CONFIG.demo ? { dati: schedaDemo(), consumo: CONSUMO_DEMO } : generaScheda({ ...input, livello: p.livello, lingua: p.lingua }),
     );
     const ora = new Date().toISOString();
     const dati = { ...V.controllaScheda(out), lingua: p.lingua, livello: p.livello, sessioni: [{ data: ora, inizio: input.energia, fine: null }], esiti: {}, test: [] };
@@ -256,9 +297,9 @@ const conConsenso = {
     const righe = (await store.schedePerId(utente.id, input.ids)).filter((r) => r.profilo_id === p.id);
     if (!righe.length) throw new HttpError(404, "Schede non trovate.");
     const materia = righe[0].materia;
-    const out = await conQuota(utente.id, "schede", limiteSchede(famiglia), async () =>
+    const out = await conQuota(utente.id, "schede", limiteSchede(famiglia), { tipo: "ripasso", immagini: 0 }, async () =>
       CONFIG.demo
-        ? schedaDemo("Ripasso (demo)")
+        ? { dati: schedaDemo("Ripasso (demo)"), consumo: CONSUMO_DEMO }
         : generaRipasso({ materia, livello: p.livello, lingua: p.lingua, modalita: input.modalita, schede: righe.map((r) => contenutoPerRipasso(r.dati)) }),
     );
     const dati = { ...V.controllaScheda(out), lingua: p.lingua, livello: p.livello, modalita: input.modalita, fonti: righe.map((r) => r.id), sessioni: [], esiti: {}, test: [] };
@@ -273,9 +314,9 @@ const conConsenso = {
     const esercizio = r?.dati.esercizi?.[input.esercizio];
     if (!esercizio) throw new HttpError(404, "Esercizio non trovato.");
     const limite = limiteSchede(famiglia) * CONFIG.limiti.verifichePerScheda;
-    const esito = await conQuota(utente.id, "verifiche", limite, async () =>
+    const esito = await conQuota(utente.id, "verifiche", limite, { tipo: "verifica", immagini: input.immagini.length }, async () =>
       CONFIG.demo
-        ? verificaDemo()
+        ? { dati: verificaDemo(), consumo: CONSUMO_DEMO }
         : verificaTentativo({
             materia: r.materia, livello: r.dati.livello, lingua: r.dati.lingua,
             esercizio: { consegna: esercizio.consegna }, contestoScheda: `${r.dati.titolo}. ${r.dati.abstract}`.slice(0, 2000),
@@ -322,6 +363,9 @@ async function gestisciApi(req, res, url) {
     if (vincolata) {
       ctx.famiglia = await store.famiglia(ctx.utente.id);
       if (!ctx.famiglia.consenso_at) throw new HttpError(403, "Serve prima il consenso del genitore.", "consenso");
+      if (CONFIG.approvazione && ctx.famiglia.stato !== "approvata" && !eAdmin(ctx.utente)) {
+        throw new HttpError(403, ctx.famiglia.stato === "sospesa" ? "Accesso sospeso." : "La tua iscrizione è in attesa di approvazione.", "approvazione");
+      }
       if (/^\/api\/(scheda|ripasso|verifica-tentativo)$/.test(url.pathname)) {
         limita("ai-utente:" + ctx.utente.id, 20, 10 * 60_000);
         limita("ai-ip:" + ip, 40, 10 * 60_000);
