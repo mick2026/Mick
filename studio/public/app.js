@@ -585,8 +585,27 @@ function vistaPrivacy() {
   </section>`;
 }
 
+// Accesso dal link nell'email: Supabase torna all'app con la sessione nell'indirizzo (#access_token=...).
+function sessioneDaLink() {
+  const h = location.hash.slice(1);
+  if (!/(^|&)(access_token|error)=/.test(h)) return;
+  const p = new URLSearchParams(h);
+  history.replaceState(null, "", location.pathname + location.search + "#/");
+  if (p.get("access_token") && p.get("refresh_token")) {
+    pref("sessione", {
+      access_token: p.get("access_token"),
+      refresh_token: p.get("refresh_token"),
+      expires_at: Number(p.get("expires_at")) || Math.floor(Date.now() / 1000) + 3600,
+    });
+    io = null;
+  } else {
+    toast(p.get("error_description") || t("linkNonValido"));
+  }
+}
+
 // ---------- router ----------
 async function router() {
+  sessioneDaLink();
   app.onclick = app.onchange = null;
   window.scrollTo(0, 0);
   const [, vista, id] = location.hash.split("/");

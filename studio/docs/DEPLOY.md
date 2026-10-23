@@ -33,23 +33,21 @@ Telefono ──► Server Studio Amico (Render/Fly, Francoforte) ──► API A
 2. Apri **SQL Editor**, incolla tutto il file `supabase/migrations/001_iniziale.sql` e premi **Run**.
    Crea le tabelle (famiglie, profili, schede, utilizzo) chiuse a chiunque tranne il server.
 3. **Authentication → Sign In / Providers → Email**: lascia attivo Email.
-   - Imposta la lunghezza del codice (**Email OTP Length**) a **6**.
-   - Scadenza del codice: 10 minuti (600 secondi) va bene.
-4. **Authentication → Emails (Templates)**: nei modelli **Magic Link** e **Confirm signup** sostituisci il
-   testo con qualcosa come:
-   ```
-   <h2>Il tuo codice per Studio Amico</h2>
-   <p>Inserisci questo codice nell'app: <strong>{{ .Token }}</strong></p>
-   <p>Se non l'hai chiesto tu, ignora questa email.</p>
-   ```
-   Senza `{{ .Token }}` arriverebbe un link invece del codice.
-5. **Authentication → SMTP**: configura un servizio di invio email (es. Brevo, Postmark, Resend).
-   Il servizio email incluso in Supabase è solo per prove e non manda email a utenti qualsiasi.
+4. **Email di accesso**: con il servizio email incluso in Supabase arriva un **link** "Log In".
+   L'app lo accetta così com'è: basta toccarlo. Il servizio incluso però manda email **solo ai
+   membri del progetto** (cioè a te) e poche all'ora: va bene per la prova con Tommaso.
+5. **Prima di aprire ad altre famiglie** (facoltativo per la prova): in **Authentication → SMTP**
+   collega un servizio email (es. Brevo, gratuito per poche centinaia di email al giorno). Da quel
+   momento puoi anche modificare i modelli in **Authentication → Emails**: in **Magic link or OTP** e
+   **Confirm sign up** aggiungi `{{ .Token }}` per mandare anche un codice da digitare, ad esempio
+   `<p>Il tuo codice: <strong>{{ .Token }}</strong></p>`.
 6. **Project Settings → API Keys**: copia
    - **Project URL** → sarà `SUPABASE_URL`
    - **Publishable key** → `SUPABASE_PUBLISHABLE_KEY`
    - **Secret key** → `SUPABASE_SECRET_KEY` (segreta: dà accesso a tutto il database).
-7. **Authentication → URL Configuration**: in **Site URL** metti l'indirizzo dell'app (dopo il passo 3).
+7. **Authentication → URL Configuration** (dopo il passo 3): in **Site URL** metti l'indirizzo dell'app
+   (es. `https://studio-amico.onrender.com`) e aggiungilo anche in **Redirect URLs**. È il posto dove
+   porta il link dell'email: senza, il link non riporta nell'app.
 
 ## 3a. Render (consigliato: il più semplice)
 
@@ -83,7 +81,7 @@ fly deploy
 
 ## 5. Primo collaudo
 
-1. Apri l'app dal telefono, inserisci la tua email, ricevi il codice, entra.
+1. Apri l'app dal telefono, inserisci la tua email e tocca il link nell'email (aprilo nello stesso telefono).
 2. Conferma il consenso del genitore, crea il profilo di Tommaso, crea una scheda vera.
 3. In Supabase → **Table Editor** controlla che ci siano una riga in `famiglie`, una in `profili`,
    una in `schede`, e che `utilizzo` segni 1.
