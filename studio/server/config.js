@@ -9,6 +9,17 @@ try {
 
 const env = process.env;
 const numero = (v, def) => (Number.isFinite(Number(v)) && v !== "" && v != null ? Number(v) : def);
+// Accetta anche l'indirizzo copiato dalla pagina "Data API" (es. .../rest/v1): serve solo https://xxxx.supabase.co
+function urlSupabase(v) {
+  if (!v) return "";
+  try {
+    const u = new URL(v.trim());
+    if (u.pathname !== "/" || u.search) console.warn(`SUPABASE_URL: uso solo ${u.origin} (ignorato "${u.pathname}${u.search}").`);
+    return u.origin;
+  } catch {
+    return v.trim();
+  }
+}
 const haSupabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SECRET_KEY);
 
 export const CONFIG = {
@@ -22,7 +33,7 @@ export const CONFIG = {
   store: env.STORE || (haSupabase ? "supabase" : "memoria"),
   storeFile: env.STORE_FILE || "",
   supabase: {
-    url: env.SUPABASE_URL || "",
+    url: urlSupabase(env.SUPABASE_URL),
     chiavePubblica: env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || "",
     chiaveSegreta: env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || "",
   },
