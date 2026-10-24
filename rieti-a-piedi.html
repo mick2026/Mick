@@ -1,0 +1,297 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1F6B67">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Rieti a piedi</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a stone "lapide" header, short history in a timeline, then a live map + list of stops sorted by distance from you */
+:root{
+  --bg:#EDF0EC; --surface:#F8FAF7; --fg:#1C2726; --muted:#5A6866; --line:#C9D1CC;
+  --velino:#1F6B67; --velino-soft:#D3E5E2; --ocra:#A8701A; --you:#C2412D;
+  --f-display:"Cinzel","Trajan Pro",Georgia,serif;
+  --f-body:"Spectral",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111918; --surface:#18221F; --fg:#E3EAE6; --muted:#97A6A2; --line:#2D3B38;
+  --velino:#5DB3AC; --velino-soft:#1C3533; --ocra:#E0A54A; --you:#F07A63; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111918; --surface:#18221F; --fg:#E3EAE6; --muted:#97A6A2; --line:#2D3B38;
+  --velino:#5DB3AC; --velino-soft:#1C3533; --ocra:#E0A54A; --you:#F07A63; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding-block:28px 64px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.04em}
+.mono{font-family:var(--f-mono);font-size:.78rem;font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-display);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ocra)}
+
+/* header: incised stone */
+header{display:flex;flex-direction:column;gap:10px;border-top:3px double var(--fg);border-bottom:3px double var(--fg);padding-block:22px;text-align:left}
+header h1{font-size:clamp(2.2rem,8vw,3.4rem);font-weight:700;line-height:1}
+header p{margin:0;color:var(--muted);max-width:60ch}
+.umbilicus{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+
+/* history */
+.storia{display:flex;flex-direction:column;gap:14px}
+.storia>p{margin:0;max-width:62ch}
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:0;border-left:2px solid var(--velino)}
+.timeline li{display:grid;grid-template-columns:5.6rem 1fr;gap:12px;padding:8px 0 8px 14px;position:relative}
+.timeline li::before{content:"";position:absolute;left:-6px;top:15px;width:10px;height:10px;border-radius:50%;background:var(--bg);border:2px solid var(--velino)}
+.timeline .y{font-family:var(--f-mono);font-size:.82rem;color:var(--velino);padding-top:3px;font-variant-numeric:tabular-nums}
+.timeline .t{min-width:0}
+
+/* locator */
+.locator{display:flex;flex-direction:column;gap:14px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.btn{font:600 .9rem var(--f-body);border:1.5px solid var(--velino);background:var(--velino);color:var(--surface);padding:9px 14px;border-radius:999px;cursor:pointer}
+button.ghost{background:transparent;color:var(--velino)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--ocra);outline-offset:2px}
+.coord{display:flex;gap:6px;flex:1 1 240px;min-width:0}
+.coord input{flex:1;min-width:0;font:400 .85rem var(--f-mono);padding:9px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--fg)}
+.status{font-size:.92rem;color:var(--muted);margin:0}
+.status b{color:var(--fg)}
+
+.mapbox{background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative}
+.mapbox svg{display:block;width:100%;height:auto;touch-action:manipulation;cursor:crosshair}
+.maphint{position:absolute;right:10px;bottom:8px;font-family:var(--f-mono);font-size:.68rem;color:var(--muted);pointer-events:none}
+
+.gpscard{border:1.5px solid var(--you);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.gpscard p{margin:0;font-size:.95rem}
+.gpscard a.btn{align-self:flex-start;text-decoration:none;background:var(--you);border-color:var(--you)}
+.route{display:flex;flex-wrap:wrap;gap:8px}
+.route a{font:600 .85rem var(--f-body);color:var(--velino);border:1.5px solid var(--velino);border-radius:999px;padding:7px 12px;text-decoration:none}
+.live{display:inline-flex;align-items:center;gap:6px;color:var(--you);font-weight:600}
+.live::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--you);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.live::before{animation:none}}
+.near{background:var(--velino-soft);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.near h3{font-size:1.15rem}
+.near p{margin:0}
+
+/* stop list */
+.stops{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.stop{display:grid;grid-template-columns:2.4rem 1fr auto;gap:12px;padding:16px 0;border-top:1px solid var(--line);align-items:start}
+.stop:last-child{border-bottom:1px solid var(--line)}
+.num{width:2.2rem;height:2.2rem;border-radius:50%;display:grid;place-items:center;font:700 .9rem var(--f-display);border:1.5px solid var(--velino);color:var(--velino)}
+.stop.is-near .num{background:var(--velino);color:var(--surface)}
+.body{min-width:0;display:flex;flex-direction:column;gap:4px}
+.body h3{font-size:1.02rem;letter-spacing:.03em}
+.body .era{font-size:.8rem;color:var(--ocra);font-style:italic}
+.body p{margin:0;font-size:.97rem}
+.body a{color:var(--velino);font-size:.85rem}
+.dist{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:4.2rem}
+.dist .m{font:500 .95rem var(--f-mono);font-variant-numeric:tabular-nums}
+.dist .min{font-size:.75rem;color:var(--muted)}
+.arrow{width:22px;height:22px;color:var(--you);transition:transform .4s}
+.foot{font-size:.82rem;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:reduce){.arrow{transition:none}}
+@media (max-width:440px){.timeline li{grid-template-columns:4.4rem 1fr}.stop{grid-template-columns:2.2rem 1fr auto;gap:10px}}
+</style>
+
+</head><body><div class="wrap">
+  <header>
+    <span class="eyebrow">Reate · Sabina · Lazio</span>
+    <h1>Rieti a piedi</h1>
+    <p>Guida tascabile al centro storico. Attiva la posizione oppure tocca la mappa dove ti trovi: le tappe si ordinano dalla più vicina.</p>
+    <div class="umbilicus"><span class="eyebrow" style="color:var(--velino)">Umbilicus Italiae</span><span class="mono">42°24′N · 12°51′E · 405 m s.l.m.</span></div>
+  </header>
+
+  <section class="storia" aria-labelledby="h-storia">
+    <span class="eyebrow">In breve</span>
+    <h2 id="h-storia">La storia</h2>
+    <p>Capitale dei Sabini, Rieti sorge sulla Via Salaria, la strada del sale tra il Tirreno e l'Adriatico. Gli antichi la chiamavano il centro esatto dell'Italia. Romana dal III secolo a.C., fu poi longobarda e nel Medioevo residenza dei papi, che qui soggiornarono a lungo. Intorno alla città si apre la Valle Santa, legata a San Francesco d'Assisi.</p>
+    <ol class="timeline">
+      <li><span class="y">IX sec. a.C.</span><span class="t">Nasce <i>Reate</i>, centro dei Sabini, popolo che secondo la leggenda si fuse con i Romani dopo il ratto delle Sabine.</span></li>
+      <li><span class="y">290 a.C.</span><span class="t">Manio Curio Dentato conquista la Sabina e fa scavare il Cavo Curiano: il lago Velino si svuota e nasce la Cascata delle Marmore.</span></li>
+      <li><span class="y">116 a.C.</span><span class="t">Nasce a Rieti Marco Terenzio Varrone, l'erudito che definì la città <i>umbilicus Italiae</i>.</span></li>
+      <li><span class="y">9 d.C.</span><span class="t">Nasce nel Reatino Vespasiano, futuro imperatore e fondatore della dinastia Flavia.</span></li>
+      <li><span class="y">VI–XI sec.</span><span class="t">Gastaldato longobardo nel Ducato di Spoleto. Nel 1149 Ruggero II di Sicilia assedia e distrugge la città.</span></li>
+      <li><span class="y">1198–1298</span><span class="t">Il secolo dei papi: Innocenzo III, Onorio III, Gregorio IX, Nicolò IV e Bonifacio VIII soggiornano a Rieti. Nel 1234 Gregorio IX vi canonizza San Domenico; nel 1289 Nicolò IV incorona qui Carlo II d'Angiò.</span></li>
+      <li><span class="y">1223</span><span class="t">San Francesco allestisce a Greccio il primo presepe. Nella Valle Santa sorgono Fonte Colombo, Poggio Bustone e La Foresta.</span></li>
+      <li><span class="y">1860–1927</span><span class="t">Fine dello Stato Pontificio e annessione al Regno d'Italia. Nel 1927 Rieti diventa capoluogo di provincia.</span></li>
+    </ol>
+  </section>
+
+  <section class="locator" aria-labelledby="h-guida">
+    <span class="eyebrow">Passeggiata</span>
+    <h2 id="h-guida">Palazzi e monumenti</h2>
+    <div class="controls">
+      <button id="gps" type="button">Usa la mia posizione</button>
+      <form class="coord" id="coordForm">
+        <input id="coordInput" inputmode="decimal" placeholder="42.4041, 12.8601" aria-label="Coordinate GPS (latitudine, longitudine)">
+        <button class="ghost" type="submit">Vai</button>
+      </form>
+    </div>
+    <div class="route"><a id="route1" target="_blank" rel="noopener">Percorso tappe 1–7 in Google Maps ↗</a><a id="route2" target="_blank" rel="noopener">Tappe 8–13 ↗</a></div>
+    <p class="status" id="status">Nessuna posizione ancora. Tocca la mappa nel punto in cui ti trovi, oppure incolla le coordinate copiate dall'app Mappe.</p>
+
+    <div class="mapbox">
+      <svg id="map" viewBox="0 0 1000 860" role="img" aria-label="Mappa schematica del centro storico di Rieti con le tappe numerate"></svg>
+      <span class="maphint">tocca per correggere la posizione</span>
+    </div>
+
+    <div class="near" id="near" hidden></div>
+
+    <ol class="stops" id="stops"></ol>
+    <p class="foot">Coordinate indicative (±30 m) e mappa schematica, non in scala stradale. Tempi calcolati a 4,5 km/h in linea d'aria più un 25% per le vie del centro.</p>
+  </section>
+</div>
+
+<script>
+const STOPS = [
+  {n:"Piazza San Rufo · Centro d'Italia", lat:42.40330, lon:12.85880, era:"Tradizione varroniana",
+   d:"La piazzetta che la tradizione indica come centro geografico d'Italia. Una lapide e un monumento a forma di tamburo celebrano l'umbilicus Italiae."},
+  {n:"Palazzo Comunale e Museo Civico", lat:42.40414, lon:12.86005, era:"XIII sec., rifatto nel '700",
+   d:"Affaccia su Piazza Vittorio Emanuele II, l'antico foro. Ospita il Museo Civico con la sezione archeologica e la pinacoteca."},
+  {n:"Fontana dei Delfini", lat:42.40400, lon:12.86040, era:"XVIII sec.",
+   d:"La fontana al centro della piazza principale, punto d'incontro dei reatini e cuore della passeggiata serale."},
+  {n:"Palazzo Vincentini", lat:42.40440, lon:12.86070, era:"XVI sec.",
+   d:"Palazzo rinascimentale attribuito alla cerchia del Vignola, con loggiato affacciato sulla valle. Oggi è sede della Prefettura."},
+  {n:"Cattedrale di Santa Maria Assunta", lat:42.40395, lon:12.86140, era:"1109–1225, campanile 1252",
+   d:"Il Duomo romanico con portico quattrocentesco e cripta del 1109. All'interno la Cappella di Santa Barbara, progettata su disegno del Bernini."},
+  {n:"Palazzo Papale", lat:42.40350, lon:12.86175, era:"1283–1288",
+   d:"La residenza dei papi, con la grande loggia gotica e la Sala delle Udienze a doppia navata. Simbolo del secolo in cui Rieti fu sede pontificia."},
+  {n:"Arco del Vescovo", lat:42.40312, lon:12.86235, era:"1298",
+   d:"Arco gotico voluto da Bonifacio VIII per collegare il Palazzo Papale agli appartamenti vescovili, scavalcando l'antica via."},
+  {n:"Palazzo Vecchiarelli · Rieti Sotterranea", lat:42.40200, lon:12.86000, era:"Maderno, 1600 circa · viadotto romano",
+   d:"Palazzo nobiliare di Carlo Maderno su Via Roma. Sotto si visita Rieti Sotterranea: le arcate del viadotto romano della Salaria, inglobate nelle cantine dei palazzi."},
+  {n:"Ponte Romano sul Velino", lat:42.40090, lon:12.85920, era:"III sec. a.C., ricostruito",
+   d:"Qui la Salaria attraversava il Velino. Restano i resti dell'antico ponte accanto a quello moderno. Oltre il fiume inizia il Borgo."},
+  {n:"Chiesa di San Francesco", lat:42.40215, lon:12.85720, era:"1245–1253",
+   d:"Chiesa gotica francescana vicino al fiume, con affreschi trecenteschi di scuola giottesca. Ricorda la lunga presenza del Santo nella Valle Santa."},
+  {n:"Teatro Flavio Vespasiano", lat:42.40530, lon:12.85745, era:"1893",
+   d:"Teatro all'italiana su Via Garibaldi intitolato all'imperatore reatino. Il sipario e le decorazioni celebrano Vespasiano; l'acustica è tra le migliori d'Italia."},
+  {n:"Chiesa di San Domenico", lat:42.40640, lon:12.85880, era:"1266–1294",
+   d:"Grande chiesa gotica dei Domenicani, oggi auditorium. Custodisce il Dom Bédos-Roubo, ricostruzione monumentale di un organo barocco francese."},
+  {n:"Mura medievali", lat:42.40700, lon:12.86010, era:"XIII sec.",
+   d:"Lungo Viale dei Flavi corre il tratto meglio conservato della cinta duecentesca, con torri a pianta quadrata e semicircolare."}
+];
+
+/* Projection: equirectangular, metres around the centre */
+const LAT0=42.4040, LON0=12.8595, KX=111320*Math.cos(LAT0*Math.PI/180), KY=110540;
+const SCALE=1.05, CX=500, CY=420; // svg px per metre
+const toXY=(lat,lon)=>[CX+(lon-LON0)*KX*SCALE, CY-(lat-LAT0)*KY*SCALE];
+const toLL=(x,y)=>[LAT0-(y-CY)/(KY*SCALE), LON0+(x-CX)/(KX*SCALE)];
+const R=6371000, rad=a=>a*Math.PI/180;
+function dist(a,b){const dLat=rad(b.lat-a.lat),dLon=rad(b.lon-a.lon);
+  const h=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function bearing(a,b){const y=Math.sin(rad(b.lon-a.lon))*Math.cos(rad(b.lat));
+  const x=Math.cos(rad(a.lat))*Math.sin(rad(b.lat))-Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lon-a.lon));
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;}
+const DIRS=["nord","nord-est","est","sud-est","sud","sud-ovest","ovest","nord-ovest"];
+const fmtM=m=>m<1000?Math.round(m/5)*5+" m":(m/1000).toFixed(1).replace(".",",")+" km";
+const walkMin=m=>Math.max(1,Math.round(m*1.25/75));
+
+let me=null; const trail=[]; let tracking=false;
+const routeUrl=a=>{const d=a[a.length-1],w=a.slice(0,-1).map(s=>s.lat+","+s.lon).join("|");
+  return `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lon}&waypoints=${encodeURIComponent(w)}&travelmode=walking`;};
+document.getElementById("route1").href=routeUrl(STOPS.slice(0,7));
+document.getElementById("route2").href=routeUrl(STOPS.slice(7));
+const svg=document.getElementById("map"), NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+const pathOf=pts=>pts.map((p,i)=>(i?"L":"M")+toXY(p[0],p[1]).map(v=>v.toFixed(1)).join(" ")).join(" ");
+
+function drawBase(){
+  svg.innerHTML="";
+  const st=getComputedStyle(document.documentElement), c=v=>st.getPropertyValue(v).trim();
+  el("rect",{x:0,y:0,width:1000,height:860,fill:c("--surface")});
+  // grid every 100 m
+  for(let i=-6;i<=6;i++){el("line",{x1:CX+i*100*SCALE,y1:0,x2:CX+i*100*SCALE,y2:860,stroke:c("--line"),"stroke-width":.6,"stroke-dasharray":"2 6"});
+    el("line",{x1:0,y1:CY+i*100*SCALE,x2:1000,y2:CY+i*100*SCALE,stroke:c("--line"),"stroke-width":.6,"stroke-dasharray":"2 6"});}
+  // walls (schematic ring of the medieval town)
+  el("path",{d:pathOf([[42.4073,12.8560],[42.4076,12.8605],[42.4062,12.8640],[42.4040,12.8650],[42.4020,12.8638],[42.4012,12.8600],[42.4016,12.8560],[42.4035,12.8546],[42.4058,12.8548]])+"Z",
+    fill:"none",stroke:c("--muted"),"stroke-width":2,"stroke-dasharray":"10 5",opacity:.55});
+  // Velino river
+  el("path",{d:pathOf([[42.4038,12.8510],[42.4026,12.8540],[42.4015,12.8570],[42.4009,12.8592],[42.4006,12.8615],[42.4008,12.8640],[42.4014,12.8665],[42.4020,12.8690]]),
+    fill:"none",stroke:c("--velino"),"stroke-width":14,"stroke-linecap":"round",opacity:.28});
+  const lbl=el("text",{x:toXY(42.39985,12.8600)[0],y:toXY(42.39985,12.8600)[1],fill:c("--velino"),"font-family":"Cinzel, serif","font-size":20,"letter-spacing":"4","text-anchor":"middle"});lbl.textContent="FIUME VELINO";
+  // Via Roma / Salaria axis
+  el("path",{d:pathOf([[42.4009,12.8592],[42.4041,12.8601],[42.4053,12.8574],[42.4060,12.8550]]),fill:"none",stroke:c("--ocra"),"stroke-width":3,opacity:.5});
+  const s=toXY(42.40545,12.8566);const t=el("text",{x:s[0],y:s[1]-10,fill:c("--ocra"),"font-family":"IBM Plex Mono, monospace","font-size":15,transform:`rotate(-28 ${s[0]} ${s[1]-10})`});t.textContent="via Salaria";
+  // north arrow + scale bar
+  el("path",{d:"M 950 30 L 962 64 L 950 56 L 938 64 Z",fill:c("--fg")});
+  const nt=el("text",{x:950,y:84,"text-anchor":"middle",fill:c("--fg"),"font-family":"Cinzel, serif","font-size":16});nt.textContent="N";
+  el("line",{x1:30,y1:830,x2:30+100*SCALE,y2:830,stroke:c("--fg"),"stroke-width":3});
+  const sc=el("text",{x:30,y:818,fill:c("--muted"),"font-family":"IBM Plex Mono, monospace","font-size":14});sc.textContent="100 m";
+  return c;
+}
+
+function render(){
+  const c=drawBase();
+  const withD=STOPS.map((s,i)=>({...s,i:i+1,m:me?dist(me,s):null,b:me?bearing(me,s):0}));
+  const nearest=me?withD.reduce((a,b)=>b.m<a.m?b:a):null;
+  // route line in walking order
+  el("path",{d:pathOf(STOPS.map(s=>[s.lat,s.lon])),fill:"none",stroke:c("--fg"),"stroke-width":1.5,"stroke-dasharray":"1 6","stroke-linecap":"round",opacity:.6});
+  if(trail.length>1)el("path",{d:pathOf(trail.map(p=>[p.lat,p.lon])),fill:"none",stroke:c("--you"),"stroke-width":4,"stroke-linecap":"round","stroke-linejoin":"round",opacity:.7});
+  if(me&&nearest){const [ax,ay]=toXY(me.lat,me.lon),[bx,by]=toXY(nearest.lat,nearest.lon);
+    el("line",{x1:ax,y1:ay,x2:bx,y2:by,stroke:c("--you"),"stroke-width":2.5,"stroke-dasharray":"6 5"});}
+  withD.forEach(s=>{const [x,y]=toXY(s.lat,s.lon);const hot=nearest&&s.i===nearest.i;
+    el("circle",{cx:x,cy:y,r:hot?19:15,fill:hot?c("--velino"):c("--surface"),stroke:c("--velino"),"stroke-width":2.5});
+    const t=el("text",{x,y:y+5,"text-anchor":"middle",fill:hot?c("--surface"):c("--velino"),"font-family":"Cinzel, serif","font-weight":700,"font-size":hot?16:14});t.textContent=s.i;});
+  if(me){let [x,y]=toXY(me.lat,me.lon);const out=x<0||x>1000||y<0||y>860;x=Math.min(985,Math.max(15,x));y=Math.min(845,Math.max(15,y));
+    el("circle",{cx:x,cy:y,r:26,fill:c("--you"),opacity:.18});
+    el("circle",{cx:x,cy:y,r:10,fill:c("--you"),stroke:c("--surface"),"stroke-width":3});
+    if(out){const t=el("text",{x:Math.min(900,Math.max(60,x)),y:y<40?y+46:y-20,"text-anchor":"middle",fill:c("--you"),"font-family":"IBM Plex Mono, monospace","font-size":14});t.textContent="sei fuori mappa";}}
+
+  // nearest card
+  const near=document.getElementById("near");
+  if(nearest){near.hidden=false;
+    const here=nearest.m<45;
+    near.innerHTML=`<span class="eyebrow">${here?"Sei qui":"Tappa più vicina"}</span><h3></h3><p class="mono"></p><p></p>`;
+    near.querySelector("h3").textContent=`${nearest.i}. ${nearest.n}`;
+    near.querySelector(".mono").textContent=here?"a pochi passi da te":`${fmtM(nearest.m)} verso ${DIRS[Math.round(nearest.b/45)%8]} · circa ${walkMin(nearest.m)} min a piedi`;
+    near.querySelector("p:last-child").textContent=nearest.d;
+  } else near.hidden=true;
+
+  // list
+  const list=document.getElementById("stops");list.innerHTML="";
+  const ordered=me?[...withD].sort((a,b)=>a.m-b.m):withD;
+  ordered.forEach(s=>{const li=document.createElement("li");li.className="stop"+(nearest&&s.i===nearest.i?" is-near":"");
+    li.innerHTML=`<span class="num"></span><div class="body"><h3></h3><span class="era"></span><p></p><a target="_blank" rel="noopener">Indicazioni a piedi ↗</a></div><div class="dist"></div>`;
+    li.querySelector(".num").textContent=s.i;li.querySelector("h3").textContent=s.n;li.querySelector(".era").textContent=s.era;li.querySelector("p").textContent=s.d;
+    li.querySelector("a").href=`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=walking`;
+    const d=li.querySelector(".dist");
+    if(me){d.innerHTML=`<svg class="arrow" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${s.b}deg)"><path d="M12 2 L19 20 L12 16 L5 20 Z" fill="currentColor"/></svg><span class="m"></span><span class="min"></span>`;
+      d.querySelector(".m").textContent=fmtM(s.m);d.querySelector(".min").textContent=walkMin(s.m)+" min";}
+    else d.innerHTML=`<span class="min mono">${s.lat.toFixed(4)}<br>${s.lon.toFixed(4)}</span>`;
+    list.appendChild(li);});
+}
+
+const status=document.getElementById("status");
+function setMe(lat,lon,src,live){me={lat,lon};
+  if(live){const last=trail[trail.length-1];if(!last||dist(last,me)>6)trail.push({lat,lon});}
+  const walked=trail.reduce((t,p,i)=>i?t+dist(trail[i-1],p):0,0);
+  status.innerHTML=(live?`<span class="live">Ti sto seguendo</span> · `:"")+`<b class="mono">${lat.toFixed(5)}, ${lon.toFixed(5)}</b> · ${src}`+(live&&walked>0?` · percorsi <b class="mono">${fmtM(walked)}</b>`:"")+`. Tappe ordinate dalla più vicina.`;render();}
+
+svg.addEventListener("click",e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());
+  const [lat,lon]=toLL(q.x,q.y);setMe(lat,lon,"segnata sulla mappa");});
+
+document.getElementById("coordForm").addEventListener("submit",e=>{e.preventDefault();
+  const v=document.getElementById("coordInput").value.match(/-?\d+(?:[.,]\d+)?/g);
+  if(!v||v.length<2){status.textContent="Scrivi latitudine e longitudine separate da una virgola o uno spazio, per esempio 42.4041 12.8601.";return;}
+  const lat=parseFloat(v[0].replace(",",".")),lon=parseFloat(v[1].replace(",","."));
+  if(Math.abs(lat)>90||Math.abs(lon)>180){status.textContent="Coordinate non valide: la latitudine va da -90 a 90, la longitudine da -180 a 180.";return;}
+  setMe(lat,lon,"inserita a mano");});
+
+let watchId=null;
+document.getElementById("gps").addEventListener("click",()=>{
+  const fail=()=>{status.textContent="Posizione non disponibile. Controlla che il GPS sia acceso e che il browser abbia il permesso di localizzazione (Impostazioni del sito). In alternativa tocca la mappa dove ti trovi.";};
+  if(!("geolocation" in navigator)){fail();return;}
+  status.textContent="Cerco la tua posizione…";
+  try{ if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+    watchId=navigator.geolocation.watchPosition(p=>setMe(p.coords.latitude,p.coords.longitude,`GPS ±${Math.round(p.coords.accuracy)} m`,true),
+      err=>{if(!me||err.code===1)fail();},{enableHighAccuracy:true,maximumAge:3000,timeout:20000});
+    navigator.wakeLock?.request("screen").catch(()=>{});
+  }catch(_){fail();}
+});
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+render();
+document.getElementById("gps").click();
+</script>
+
+</body></html>
