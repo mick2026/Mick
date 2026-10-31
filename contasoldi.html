@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Contasoldi</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: una colonna stretta, righe per taglio con stepper, totale fisso in basso */
+:root{
+  --bg:#eef1ee; --surface:#ffffff; --fg:#17201b; --muted:#5d6a63; --line:#d5ddd8;
+  --accent:#1d4f91; --accent-fg:#ffffff; --danger:#a3281d;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  /* colori reali delle banconote e monete */
+  --e500:#7b4b94; --e200:#c9a227; --e100:#3f8f4f; --e50:#e07b24; --e20:#3a6fb7; --e10:#c4413b; --e5:#8a8f94;
+  --gold:#c9a74a; --copper:#b8693d; --bimetal:#a9acae;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111613; --surface:#1a211d; --fg:#e7ede9; --muted:#9aa7a0; --line:#2c3630;
+  --accent:#7fa8e6; --accent-fg:#0d1a2c; --danger:#f08a7e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111613; --surface:#1a211d; --fg:#e7ede9; --muted:#9aa7a0; --line:#2c3630;
+  --accent:#7fa8e6; --accent-fg:#0d1a2c; --danger:#f08a7e; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:640px;margin:0 auto;padding-block:24px 150px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;letter-spacing:-.02em;margin:0;text-wrap:balance}
+header p{margin:2px 0 0;color:var(--muted)}
+.actions{display:flex;gap:8px}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:7px 12px;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.danger{color:var(--danger)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+section{margin-top:22px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px;border-bottom:1px solid var(--line)}
+h2{font-family:var(--display);font-weight:500;font-size:1.1rem;margin:0}
+.sec-head .sub{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.sec-head .sub small{font-family:var(--body);text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;margin-right:6px}
+
+.row{display:grid;grid-template-columns:72px 1fr auto;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.row.on .sum{color:var(--fg)}
+.den{display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:1.05rem;color:#fff;height:38px}
+.note .den{border-radius:4px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.coin .den{width:42px;height:42px;border-radius:50%;margin:0 15px;font-size:.92rem;color:#2a2116;box-shadow:inset 0 0 0 3px rgba(0,0,0,.12)}
+.coin .den.bi{background:radial-gradient(circle,var(--gold) 52%,var(--bimetal) 54%)}
+.coin .den.bi.inv{background:radial-gradient(circle,var(--bimetal) 52%,var(--gold) 54%)}
+.stepper{display:flex;align-items:center;gap:6px;justify-self:start}
+.stepper button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:1.2rem;line-height:1}
+.stepper button:hover{border-color:var(--accent);color:var(--accent)}
+.stepper input{width:64px;height:36px;text-align:center;font-family:var(--mono);font-size:1rem;font-variant-numeric:tabular-nums;
+  border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
+.stepper input::-webkit-inner-spin-button{-webkit-appearance:none}
+.stepper input{-moz-appearance:textfield}
+.sum{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);text-align:right;min-width:96px}
+
+.total{position:fixed;left:0;right:0;bottom:0;background:var(--accent);color:var(--accent-fg);
+  padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));padding-top:14px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.total .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.total .lbl{text-transform:uppercase;letter-spacing:.08em;font-size:.75rem;opacity:.85}
+.total .val{font-family:var(--mono);font-weight:600;font-size:clamp(1.6rem,6vw,2.2rem);font-variant-numeric:tabular-nums;line-height:1.1}
+.total .meta{font-size:.85rem;opacity:.9;text-align:right}
+.total .btn{background:transparent;color:var(--accent-fg);border-color:currentColor}
+
+.confirm{display:flex;gap:8px;align-items:center;margin-top:10px;padding:10px 12px;border:1px solid var(--danger);border-radius:8px;flex-wrap:wrap}
+.confirm span{flex:1;min-width:160px}
+.toast{color:var(--muted);font-size:.85rem;min-height:1.2em;margin-top:6px}
+@media (max-width:420px){
+  .row{grid-template-columns:56px 1fr auto;gap:8px}
+  .note .den{font-size:.9rem}
+  .coin .den{margin:0 7px}
+  .stepper input{width:52px}
+  .sum{min-width:80px}
+}
+@media (prefers-reduced-motion:no-preference){.val{transition:opacity .15s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Contasoldi</h1>
+      <p>Inserisci quanti pezzi hai per ogni taglio.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="copy">Copia riepilogo</button>
+      <button class="btn danger" id="reset">Azzera</button>
+    </div>
+  </header>
+  <div class="confirm" id="confirm" hidden>
+    <span>Azzerare tutti i conteggi?</span>
+    <button class="btn danger" id="confirmYes">Sì, azzera</button>
+    <button class="btn" id="confirmNo">Annulla</button>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <section class="note" aria-labelledby="h-note">
+    <div class="sec-head"><h2 id="h-note">Banconote</h2><span class="sub"><small id="nNotes">0 pz</small><span id="tNotes">0,00 €</span></span></div>
+    <div id="notes"></div>
+  </section>
+
+  <section class="coin" aria-labelledby="h-coin">
+    <div class="sec-head"><h2 id="h-coin">Monete</h2><span class="sub"><small id="nCoins">0 pz</small><span id="tCoins">0,00 €</span></span></div>
+    <div id="coins"></div>
+  </section>
+</div>
+
+<div class="total" aria-live="polite">
+  <div class="in">
+    <div>
+      <div class="lbl">Totale</div>
+      <div class="val" id="grand">0,00 €</div>
+    </div>
+    <div class="meta" id="meta">0 banconote · 0 monete</div>
+  </div>
+</div>
+
+<script>
+// valori in centesimi per evitare errori di arrotondamento
+const NOTES=[[50000,'500','--e500'],[20000,'200','--e200'],[10000,'100','--e100'],[5000,'50','--e50'],[2000,'20','--e20'],[1000,'10','--e10'],[500,'5','--e5']];
+const COINS=[[200,'2 €','bi'],[100,'1 €','bi inv'],[50,'50c','gold'],[20,'20c','gold'],[10,'10c','gold'],[5,'5c','copper'],[2,'2c','copper'],[1,'1c','copper']];
+const KEY='contasoldi-v1';
+let counts={};
+try{counts=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){counts={}}
+
+const fmt=c=>(c/100).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const label=v=>v>=100?(v/100)+' €':v+' cent';
+
+function buildRow(v,txt,style,isNote){
+  const row=document.createElement('div');row.className='row';
+  const den=document.createElement('div');den.className='den';den.textContent=txt;
+  if(isNote) den.style.background=`var(${style})`;
+  else if(style.startsWith('bi')) den.className='den '+style;
+  else den.style.background=`var(--${style})`;
+  const st=document.createElement('div');st.className='stepper';
+  const id='q'+v;
+  st.innerHTML=`<button type="button" aria-label="Togli un pezzo da ${label(v)}">−</button>
+    <input id="${id}" type="number" inputmode="numeric" min="0" step="1" aria-label="Pezzi da ${label(v)}">
+    <button type="button" aria-label="Aggiungi un pezzo da ${label(v)}">+</button>`;
+  const [minus,input,plus]=st.children;
+  const sum=document.createElement('div');sum.className='sum';
+  input.value=counts[v]||'';
+  input.placeholder='0';
+  const set=n=>{n=Math.max(0,Math.floor(Number(n)||0));counts[v]=n;input.value=n||'';update()};
+  minus.onclick=()=>set((counts[v]||0)-1);
+  plus.onclick=()=>set((counts[v]||0)+1);
+  input.addEventListener('input',()=>{const n=Math.max(0,Math.floor(Number(input.value)||0));counts[v]=n;update()});
+  input.addEventListener('blur',()=>{input.value=counts[v]||''});
+  input.addEventListener('focus',()=>input.select());
+  row.append(den,st,sum);
+  row._sum=sum;row._v=v;
+  return row;
+}
+const rows=[];
+NOTES.forEach(([v,t,s])=>{const r=buildRow(v,t,s,true);document.getElementById('notes').append(r);rows.push(r)});
+COINS.forEach(([v,t,s])=>{const r=buildRow(v,t,s,false);document.getElementById('coins').append(r);rows.push(r)});
+
+function totals(){
+  let tn=0,tc=0,nn=0,nc=0;
+  NOTES.forEach(([v])=>{const n=counts[v]||0;tn+=n*v;nn+=n});
+  COINS.forEach(([v])=>{const n=counts[v]||0;tc+=n*v;nc+=n});
+  return {tn,tc,nn,nc};
+}
+function update(){
+  rows.forEach(r=>{const n=counts[r._v]||0;r._sum.textContent=fmt(n*r._v);r.classList.toggle('on',n>0)});
+  const {tn,tc,nn,nc}=totals();
+  document.getElementById('tNotes').textContent=fmt(tn);
+  document.getElementById('tCoins').textContent=fmt(tc);
+  document.getElementById('nNotes').textContent=nn+' pz';
+  document.getElementById('nCoins').textContent=nc+' pz';
+  document.getElementById('grand').textContent=fmt(tn+tc);
+  document.getElementById('meta').textContent=`${nn} banconot${nn===1?'a':'e'} · ${nc} monet${nc===1?'a':'e'}`;
+  try{localStorage.setItem(KEY,JSON.stringify(counts))}catch(e){}
+}
+update();
+
+const toast=m=>{const t=document.getElementById('toast');t.textContent=m;clearTimeout(t._h);t._h=setTimeout(()=>t.textContent='',2500)};
+const confirmBox=document.getElementById('confirm');
+document.getElementById('reset').onclick=()=>{confirmBox.hidden=false;document.getElementById('confirmNo').focus()};
+document.getElementById('confirmNo').onclick=()=>{confirmBox.hidden=true};
+document.getElementById('confirmYes').onclick=()=>{
+  counts={};rows.forEach(r=>{document.getElementById('q'+r._v).value=''});update();confirmBox.hidden=true;toast('Conteggi azzerati.');
+};
+
+function summary(){
+  const lines=[];
+  [...NOTES,...COINS].forEach(([v])=>{const n=counts[v]||0;if(n)lines.push(`${n} × ${label(v)} = ${fmt(n*v)}`)});
+  const {tn,tc}=totals();
+  lines.push('—',`Banconote: ${fmt(tn)}`,`Monete: ${fmt(tc)}`,`TOTALE: ${fmt(tn+tc)}`);
+  return lines.join('\n');
+}
+document.getElementById('copy').onclick=()=>{
+  const text=summary();
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast('Riepilogo copiato.'),()=>fallback(text));
+  } else fallback(text);
+};
+function fallback(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.append(ta);ta.select();
+  let ok=false;try{ok=document.execCommand('copy')}catch(e){}
+  ta.remove();toast(ok?'Riepilogo copiato.':'Copia non riuscita: seleziona il totale a mano.');
+}
+</script>
+</body>
+</html>
